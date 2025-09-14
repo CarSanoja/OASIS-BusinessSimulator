@@ -107,21 +107,41 @@ class ApiService {
       headers.Authorization = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+      });
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        this.logout();
-        throw new Error('Authentication required');
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.logout();
+          throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+        }
+        
+        if (response.status === 403) {
+          throw new Error('No tienes permisos para realizar esta acción.');
+        }
+        
+        if (response.status === 404) {
+          throw new Error('El recurso solicitado no existe.');
+        }
+        
+        if (response.status === 500) {
+          throw new Error('Error interno del servidor. Por favor, intenta más tarde.');
+        }
+        
+        const errorData = await response.text();
+        throw new Error(`Error ${response.status}: ${errorData}`);
       }
-      const errorData = await response.text();
-      throw new Error(`API Error: ${response.status} - ${errorData}`);
-    }
 
-    return response.json();
+      return response.json();
+    } catch (error) {
+      if (error instanceof TypeError) {
+        throw new Error('Error de conexión. Verifica tu conexión a internet.');
+      }
+      throw error;
+    }
   }
 
   // Authentication
@@ -139,11 +159,24 @@ class ApiService {
     return response;
   }
 
-  logout(): void {
-    this.token = null;
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+  async logout(): Promise<void> {
+    try {
+      const refreshToken = localStorage.getItem('refresh_token');
+      if (refreshToken) {
+        await this.request('/auth/logout/', {
+          method: 'POST',
+          body: JSON.stringify({ refresh: refreshToken }),
+        });
+      }
+    } catch (error) {
+      console.warn('Server logout failed, proceeding with local logout:', error);
+    } finally {
+      // Always clear local storage
+      this.token = null;
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+    }
   }
 
   getCurrentUser(): UserData | null {
@@ -319,6 +352,32 @@ class ApiService {
     }>;
   }> {
     return this.request('/analytics/analytics/learning_paths/');
+  }
+
+  // Notifications
+  async getNotifications(): Promise<{
+    notifications: Array<{
+      id: number;
+      type: string;
+      title: string;
+      message: string;
+      is_read: boolean;
+      created_at: string;
+    }>;
+    unread_count: number;
+  }> {
+    return this.request('/notifications/notifications/list_notifications/');
+  }
+
+  async markNotificationRead(notificationId: number): Promise<void> {
+    await this.request('/notifications/notifications/mark_read/', {
+      method: 'POST',
+      body: JSON.stringify({ notification_id: notificationId }),
+    });
+  }
+
+  async getUnreadCount(): Promise<{ unread_count: number }> {
+    return this.request('/notifications/notifications/unread_count/');
   }
 }
 

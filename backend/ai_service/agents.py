@@ -54,11 +54,34 @@ class SimpleAIService:
         scenario_id = self._detect_scenario_type(state.scenario_context)
         responses = self.response_templates.get(scenario_id, self.response_templates['default'])
         
-        # Select response based on conversation length
+        # Get last user message for context
+        last_user_message = ""
+        for msg in reversed(state.messages):
+            if msg.startswith('User:'):
+                last_user_message = msg[5:].lower()
+                break
+        
+        # Select response based on conversation length and content
         message_count = len([msg for msg in state.messages if msg.startswith('User:')])
         response_index = min(message_count - 1, len(responses) - 1)
         
-        return responses[response_index]
+        # Adjust response based on AI personality
+        base_response = responses[response_index]
+        
+        # Modify response based on AI personality traits
+        if state.ai_personality.get('analytical', 50) > 70:
+            if 'números' not in base_response and 'datos' not in base_response:
+                base_response += " Necesito ver datos específicos y métricas concretas para evaluar esta propuesta."
+        
+        if state.ai_personality.get('aggression', 30) > 70:
+            if 'sin embargo' not in base_response:
+                base_response = base_response.replace('Interesante', 'Francamente')
+                base_response = base_response.replace('Me gusta', 'No estoy convencido de')
+        
+        if state.ai_personality.get('patience', 50) < 30:
+            base_response += " Necesito una respuesta rápida y decisiva."
+        
+        return base_response
     
     def _detect_scenario_type(self, context: str) -> str:
         """Detect scenario type based on context keywords"""

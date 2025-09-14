@@ -3,6 +3,8 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 from .models import Scenario, CustomSimulation
 from .serializers import ScenarioSerializer, CustomSimulationSerializer, CustomSimulationCreateSerializer
 from ai_service.agents import simulation_agent
@@ -37,6 +39,7 @@ class ScenarioViewSet(viewsets.ReadOnlyModelViewSet):
         
         return queryset
     
+    @method_decorator(cache_page(60 * 15))  # Cache for 15 minutes
     @action(detail=False, methods=['get'])
     def featured(self, request):
         """Get featured scenarios"""
@@ -44,6 +47,7 @@ class ScenarioViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(featured_scenarios, many=True)
         return Response(serializer.data)
     
+    @method_decorator(cache_page(60 * 30))  # Cache for 30 minutes
     @action(detail=False, methods=['get'])
     def categories(self, request):
         """Get all available categories"""

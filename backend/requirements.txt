@@ -14,3 +14,6 @@ Pillow==10.1.0
 # Simplified AI dependencies (will be enhanced later)
 openai==1.51.0
 numpy==1.26.2
+
+# Caching
+django-redis==5.4.0

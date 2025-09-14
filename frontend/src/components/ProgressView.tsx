@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -8,7 +9,6 @@ import {
   Target, 
   Calendar, 
   TrendingUp, 
-  Star,
   BarChart3,
   Award,
   BookOpen,
@@ -16,6 +16,7 @@ import {
   Zap
 } from "lucide-react";
 import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { apiService } from "../services/api";
 
 interface CompetencyData {
   competency: string;
@@ -49,45 +50,52 @@ interface ProgressViewProps {
 }
 
 export function ProgressView({ onBackToDashboard, onStartScenario }: ProgressViewProps) {
-  // Mock data - en implementación real vendría del backend
-  const competencyData: CompetencyData[] = [
-    { competency: 'Negociación', current: 82, target: 90, sessions: 5 },
-    { competency: 'Liderazgo', current: 75, target: 88, sessions: 3 },
-    { competency: 'Comunicación', current: 88, target: 92, sessions: 4 },
-    { competency: 'Estrategia', current: 70, target: 85, sessions: 2 },
-    { competency: 'Crisis Mgmt', current: 65, target: 80, sessions: 1 },
-    { competency: 'Innovación', current: 78, target: 85, sessions: 3 }
-  ];
+  const [competencyData, setCompetencyData] = useState<CompetencyData[]>([]);
+  const [simulationHistory, setSimulationHistory] = useState<SimulationHistory[]>([]);
+  const [progressOverTime, setProgressOverTime] = useState<any[]>([]);
+  const [keyMetrics, setKeyMetrics] = useState<any>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const simulationHistory: SimulationHistory[] = [
-    {
-      id: '1',
-      title: 'Negociación de Fusión y Adquisición',
-      category: 'Estrategia Corporativa',
-      date: '2024-01-10',
-      score: 87,
-      duration: 28,
-      skills: ['Negociación estratégica', 'Análisis financiero']
-    },
-    {
-      id: '2',
-      title: 'Liderazgo en Crisis Corporativa',
-      category: 'Liderazgo Ejecutivo',
-      date: '2024-01-08',
-      score: 75,
-      duration: 32,
-      skills: ['Liderazgo en crisis', 'Comunicación estratégica']
-    },
-    {
-      id: '3',
-      title: 'Pitch a Inversionistas',
-      category: 'Emprendimiento',
-      date: '2024-01-05',
-      score: 82,
-      duration: 24,
-      skills: ['Storytelling', 'Presentación ejecutiva']
-    }
-  ];
+  useEffect(() => {
+    const loadProgressData = async () => {
+      try {
+        setLoading(true);
+        
+        // Load user progress
+        const progressResponse = await apiService.getUserProgress();
+        
+        // Convert to CompetencyData format
+        const competencies = progressResponse.competency_scores.map(comp => ({
+          competency: comp.competency,
+          current: comp.current_score,
+          target: comp.target_score,
+          sessions: comp.sessions_count
+        }));
+        setCompetencyData(competencies);
+
+        // Load analytics data
+        const analyticsResponse = await apiService.getAnalytics();
+        setProgressOverTime(analyticsResponse.progress_over_time);
+        setKeyMetrics(analyticsResponse.key_metrics);
+
+        // Load simulation history
+        const historyResponse = await apiService.getSimulationHistory();
+        setSimulationHistory(historyResponse.history);
+
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load progress data');
+        console.error('Error loading progress data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProgressData();
+  }, []);
+
+  // Data now loaded from API in useEffect
 
   const learningPaths: LearningPath[] = [
     {
@@ -144,9 +152,39 @@ export function ProgressView({ onBackToDashboard, onStartScenario }: ProgressVie
     return 'text-red-600';
   };
 
-  const averageScore = Math.round(competencyData.reduce((acc, item) => acc + item.current, 0) / competencyData.length);
-  const totalSessions = simulationHistory.length;
-  const improvementTrend = progressOverTime[progressOverTime.length - 1].score - progressOverTime[0].score;
+  const averageScore = competencyData.length > 0 
+    ? Math.round(competencyData.reduce((acc, item) => acc + item.current, 0) / competencyData.length)
+    : keyMetrics.average_score || 0;
+  const totalSessions = keyMetrics.total_simulations || simulationHistory.length;
+  const improvementTrend = keyMetrics.improvement_trend || (
+    progressOverTime.length > 1 
+      ? progressOverTime[progressOverTime.length - 1].score - progressOverTime[0].score 
+      : 0
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h3 className="text-xl font-semibold mb-2">Cargando Progreso</h3>
+          <p className="text-gray-600">Analizando tu desarrollo profesional...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold mb-2 text-red-600">Error al Cargar Progreso</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={onBackToDashboard}>Volver al Dashboard</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6" style={{ minHeight: 'calc(100vh - 80px)' }}>

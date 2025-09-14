@@ -4,13 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
-import { Separator } from "./ui/separator";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Slider } from "./ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { apiService, type CustomSimulation } from "../services/api";
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -189,27 +189,58 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
     }
   };
 
-  const handleSave = (publish: boolean = false) => {
-    const simulation: CustomSimulation = {
-      id: Date.now().toString(),
-      title: formData.title || "",
-      description: formData.description || "",
-      category: formData.category || "Personalizado",
-      difficulty: formData.difficulty || "Intermedio",
-      skills: formData.skills || [],
-      userRole: formData.userRole || "",
-      aiRole: formData.aiRole || "",
-      aiPersonality: formData.aiPersonality!,
-      aiObjectives: formData.aiObjectives?.filter(obj => obj.trim() !== '') || [],
-      userObjectives: formData.userObjectives?.filter(obj => obj.trim() !== '') || [],
-      endConditions: formData.endConditions?.filter(cond => cond.trim() !== '') || [],
-      knowledgeBase: formData.knowledgeBase,
-      isPublished: publish,
-      createdBy: "Usuario Actual", // En implementación real vendría del contexto de usuario
-      createdAt: new Date()
-    };
+  const handleSave = async (publish: boolean = false) => {
+    try {
+      const simulationData = {
+        title: formData.title || "",
+        description: formData.description || "",
+        category: formData.category || "Personalizado",
+        difficulty: formData.difficulty || "Intermedio",
+        skills: formData.skills || [],
+        user_role: formData.userRole || "",
+        ai_role: formData.aiRole || "",
+        ai_personality: formData.aiPersonality!,
+        ai_objectives: formData.aiObjectives?.filter(obj => obj.trim() !== '') || [],
+        user_objectives: formData.userObjectives?.filter(obj => obj.trim() !== '') || [],
+        end_conditions: formData.endConditions?.filter(cond => cond.trim() !== '') || [],
+        knowledge_base: formData.knowledgeBase,
+        is_published: false // Always create as draft first
+      };
 
-    onSimulationCreated(simulation);
+      // Create simulation via API
+      const createdSimulation = await apiService.createCustomSimulation(simulationData);
+      
+      // If publish is requested, publish it
+      if (publish && createdSimulation.id) {
+        await apiService.publishCustomSimulation(createdSimulation.id);
+        createdSimulation.isPublished = true;
+      }
+
+      // Convert to expected format for parent component
+      const simulation: CustomSimulation = {
+        id: createdSimulation.id,
+        title: createdSimulation.title,
+        description: createdSimulation.description,
+        category: createdSimulation.category,
+        difficulty: createdSimulation.difficulty,
+        skills: createdSimulation.skills,
+        userRole: createdSimulation.user_role,
+        aiRole: createdSimulation.ai_role,
+        aiPersonality: createdSimulation.ai_personality,
+        aiObjectives: createdSimulation.ai_objectives,
+        userObjectives: createdSimulation.user_objectives,
+        endConditions: createdSimulation.end_conditions,
+        knowledgeBase: createdSimulation.knowledge_base,
+        isPublished: createdSimulation.is_published,
+        createdBy: createdSimulation.created_by_name || "Usuario Actual",
+        createdAt: new Date(createdSimulation.created_at)
+      };
+
+      onSimulationCreated(simulation);
+    } catch (error) {
+      console.error('Error saving simulation:', error);
+      alert('Error al guardar la simulación. Por favor, intenta de nuevo.');
+    }
   };
 
   const canProceedToNext = () => {

@@ -77,7 +77,7 @@ interface CustomSimulation {
 }
 
 interface DashboardViewProps {
-  onStartSimulation: (scenario: Scenario) => void;
+  onStartSimulation: (scenario: any) => void;
   onViewProgress: () => void;
   onViewCreator: () => void;
   customSimulations: CustomSimulation[];
@@ -586,56 +586,73 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                 <p className="text-gray-600">Simulaciones ideales para tu primera experiencia de aprendizaje inmersivo</p>
               </div>
               
-              <div className="grid md:grid-cols-2 gap-8">
-                {scenarios.filter(s => s.difficulty === 'Intermedio').slice(0, 2).map((scenario, index) => (
-                  <div key={scenario.id} className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
-                    <div className="relative h-48 overflow-hidden">
-                      <ImageWithFallback
-                        src={scenario.image}
-                        alt={scenario.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                      <div className="absolute top-4 left-4">
-                        <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30">
-                          {getCategoryIcon(scenario.category)}
-                          <span className="ml-1">{scenario.category}</span>
-                        </Badge>
-                      </div>
-                      <div className="absolute top-4 right-4 flex gap-1">
-                        {getDifficultyStars(scenario.difficulty)}
-                      </div>
-                    </div>
-                    
-                    <div className="p-6">
-                      <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                        {scenario.title}
-                      </h4>
-                      <p className="text-gray-600 mb-4 line-clamp-2">
-                        {scenario.description}
-                      </p>
-                      
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-sm text-gray-500 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {scenario.duration}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {scenario.difficulty}
-                        </Badge>
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="mt-4 text-gray-600">Cargando simulaciones...</p>
+                </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <p className="text-red-600 mb-4">Error: {error}</p>
+                  <Button onClick={() => window.location.reload()}>
+                    Reintentar
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-8">
+                  {scenarios.filter(s => s.difficulty === 'Intermedio').slice(0, 2).map((scenario, index) => (
+                    <div key={scenario.id} className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+                      <div className="relative h-48 overflow-hidden">
+                        <ImageWithFallback
+                          src={scenario.image_url || 'https://images.unsplash.com/photo-1551135049-8a33b5883817?w=400'}
+                          alt={scenario.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                        <div className="absolute top-4 left-4">
+                          <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30">
+                            {getCategoryIcon(scenario.category)}
+                            <span className="ml-1">{scenario.category}</span>
+                          </Badge>
+                        </div>
+                        <div className="absolute top-4 right-4 flex gap-1">
+                          {getDifficultyStars(scenario.difficulty)}
+                        </div>
                       </div>
                       
-                      <Button 
-                        onClick={() => onStartSimulation(scenario)}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg"
-                      >
-                        Comenzar Simulación
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
+                      <div className="p-6">
+                        <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                          {scenario.title}
+                        </h4>
+                        <p className="text-gray-600 mb-4 line-clamp-2">
+                          {scenario.description}
+                        </p>
+                        
+                        <div className="flex items-center justify-between mb-4">
+                          <span className="text-sm text-gray-500 flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {scenario.duration}
+                          </span>
+                          <Badge variant="outline" className="text-xs">
+                            {scenario.difficulty}
+                          </Badge>
+                        </div>
+                        
+                        <Button 
+                          onClick={() => onStartSimulation({
+                            ...scenario,
+                            image: scenario.image_url || ''
+                          })}
+                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg"
+                        >
+                          Comenzar Simulación
+                          <ArrowRight className="h-4 w-4 ml-2" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
         )}
@@ -753,84 +770,101 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-8">
-              {filteredScenarios.map((scenario, index) => (
-                <div key={scenario.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 group">
-                  <div className="relative h-48 overflow-hidden">
-                    <ImageWithFallback
-                      src={scenario.image}
-                      alt={scenario.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
-                    
-                    <div className="absolute top-4 left-4">
-                      <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30">
-                        {getCategoryIcon(scenario.category)}
-                        <span className="ml-1">{scenario.category}</span>
-                      </Badge>
-                    </div>
-                    
-                    <div className="absolute top-4 right-4 flex items-center gap-2">
-                      <div className="flex gap-1">
-                        {getDifficultyStars(scenario.difficulty)}
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-4 text-gray-600">Cargando catálogo...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <p className="text-red-600 mb-4">Error: {error}</p>
+                <Button onClick={() => window.location.reload()}>
+                  Reintentar
+                </Button>
+              </div>
+            ) : (
+              <div className="grid lg:grid-cols-2 gap-8">
+                {filteredScenarios.map((scenario, index) => (
+                  <div key={scenario.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 group">
+                    <div className="relative h-48 overflow-hidden">
+                      <ImageWithFallback
+                        src={scenario.image_url || 'https://images.unsplash.com/photo-1551135049-8a33b5883817?w=400'}
+                        alt={scenario.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                      
+                      <div className="absolute top-4 left-4">
+                        <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30">
+                          {getCategoryIcon(scenario.category)}
+                          <span className="ml-1">{scenario.category}</span>
+                        </Badge>
                       </div>
-                      <Badge className={`text-xs ${
-                        scenario.difficulty === 'Principiante' ? 'bg-green-500/20 text-green-200 border-green-300' :
-                        scenario.difficulty === 'Intermedio' ? 'bg-yellow-500/20 text-yellow-200 border-yellow-300' :
-                        'bg-red-500/20 text-red-200 border-red-300'
-                      }`}>
-                        {scenario.difficulty}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="p-6">
-                    <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-                      {scenario.title}
-                    </h4>
-                    <p className="text-gray-600 mb-4 line-clamp-2">
-                      {scenario.description}
-                    </p>
-                    
-                    <div className="flex items-center justify-between mb-4 text-sm text-gray-500">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {scenario.duration}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {scenario.participants.split(',').length} stakeholders
-                      </span>
-                    </div>
-                    
-                    <div className="mb-4">
-                      <p className="text-xs font-medium text-gray-700 mb-2">Competencias clave:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {scenario.skills.slice(0, 2).map((skill) => (
-                          <Badge key={skill} variant="outline" className="text-xs">
-                            {skill}
-                          </Badge>
-                        ))}
-                        {scenario.skills.length > 2 && (
-                          <Badge variant="outline" className="text-xs text-gray-500">
-                            +{scenario.skills.length - 2} más
-                          </Badge>
-                        )}
+                      
+                      <div className="absolute top-4 right-4 flex items-center gap-2">
+                        <div className="flex gap-1">
+                          {getDifficultyStars(scenario.difficulty)}
+                        </div>
+                        <Badge className={`text-xs ${
+                          scenario.difficulty === 'Principiante' ? 'bg-green-500/20 text-green-200 border-green-300' :
+                          scenario.difficulty === 'Intermedio' ? 'bg-yellow-500/20 text-yellow-200 border-yellow-300' :
+                          'bg-red-500/20 text-red-200 border-red-300'
+                        }`}>
+                          {scenario.difficulty}
+                        </Badge>
                       </div>
                     </div>
                     
-                    <Button 
-                      onClick={() => onStartSimulation(scenario)}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg"
-                    >
-                      Comenzar Simulación
-                      <ArrowRight className="h-4 w-4 ml-2" />
-                    </Button>
+                    <div className="p-6">
+                      <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                        {scenario.title}
+                      </h4>
+                      <p className="text-gray-600 mb-4 line-clamp-2">
+                        {scenario.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between mb-4 text-sm text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {scenario.duration}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          {scenario.participants.split(',').length} stakeholders
+                        </span>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <p className="text-xs font-medium text-gray-700 mb-2">Competencias clave:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {scenario.skills.slice(0, 2).map((skill) => (
+                            <Badge key={skill} variant="outline" className="text-xs">
+                              {skill}
+                            </Badge>
+                          ))}
+                          {scenario.skills.length > 2 && (
+                            <Badge variant="outline" className="text-xs text-gray-500">
+                              +{scenario.skills.length - 2} más
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        onClick={() => onStartSimulation({
+                          ...scenario,
+                          image: scenario.image_url || ''
+                        })}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg"
+                      >
+                        Comenzar Simulación
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

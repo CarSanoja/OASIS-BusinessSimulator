@@ -10,7 +10,6 @@ import {
   ArrowLeft, 
   Send, 
   Target, 
-  Clock, 
   User, 
   Bot, 
   AlertCircle,
@@ -20,11 +19,11 @@ import {
   TrendingUp,
   Activity,
   Thermometer,
-  Zap,
   Play,
   Users,
   BookOpen
 } from "lucide-react";
+import { apiService, type Message, type Simulation } from "../services/api";
 
 interface Message {
   id: string;
@@ -59,8 +58,11 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   const [startTime] = useState(new Date());
   const [currentTime, setCurrentTime] = useState(new Date());
   const [objectiveProgress, setObjectiveProgress] = useState<Record<string, boolean>>({});
-  const [emotionalTone, setEmotionalTone] = useState(50); // 0-100 scale
-  const [strategicAlignment, setStrategicAlignment] = useState(75); // 0-100 scale
+  const [emotionalTone, setEmotionalTone] = useState(50);
+  const [strategicAlignment, setStrategicAlignment] = useState(75);
+  const [simulation, setSimulation] = useState<Simulation | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Update current time every minute
@@ -76,16 +78,38 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Initialize conversation
+  // Initialize simulation
   useEffect(() => {
-    const welcomeMessage: Message = {
-      id: '1',
-      sender: 'ai',
-      content: getWelcomeMessage(scenario),
-      timestamp: new Date(),
-      emotion: 'neutral'
+    const initializeSimulation = async () => {
+      try {
+        setLoading(true);
+        
+        // Create simulation
+        const newSimulation = await apiService.createSimulation({
+          scenario: parseInt(scenario.id)
+        });
+        setSimulation(newSimulation);
+        
+        // Add welcome message
+        const welcomeMessage: Message = {
+          id: '1',
+          sender: 'ai',
+          content: getWelcomeMessage(scenario),
+          timestamp: new Date(),
+          emotion: 'neutral'
+        };
+        setMessages([welcomeMessage]);
+        
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to initialize simulation');
+        console.error('Error initializing simulation:', err);
+      } finally {
+        setLoading(false);
+      }
     };
-    setMessages([welcomeMessage]);
+
+    initializeSimulation();
   }, [scenario]);
 
   const getWelcomeMessage = (scenario: Scenario) => {
@@ -156,65 +180,76 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   };
 
   const handleSendMessage = async () => {
-    if (!currentMessage.trim()) return;
+    if (!currentMessage.trim() || !simulation) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      sender: 'user',
-      content: currentMessage,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    const messageContent = currentMessage;
     setCurrentMessage('');
     setIsAiTyping(true);
 
-    // Simulate AI thinking time
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'ai',
-        content: getAIResponse(currentMessage, [...messages, userMessage]),
-        timestamp: new Date(),
-        emotion: Math.random() > 0.7 ? 'skeptical' : 'neutral'
-      };
-
-      setMessages(prev => [...prev, aiResponse]);
-      setIsAiTyping(false);
-
-      // Simulate objective progress and dynamic metrics
-      if (Math.random() > 0.6) {
-        const randomObjectiveIndex = Math.floor(Math.random() * scenario.objectives.length);
-        const objectiveKey = scenario.objectives[randomObjectiveIndex];
-        setObjectiveProgress(prev => ({ ...prev, [objectiveKey]: true }));
-      }
-
+    try {
+      // Send message to API and get AI response
+      const response = await apiService.sendMessage(simulation.id, messageContent);
+      
+      // Add both user and AI messages to state
+      setMessages(prev => [...prev, response.user_message, response.ai_message]);
+      
+      // Update objective progress
+      setObjectiveProgress(prev => ({ ...prev, ...response.objective_progress }));
+      
       // Update emotional tone based on AI response emotion
-      if (aiResponse.emotion === 'skeptical') {
+      if (response.ai_message.emotion === 'skeptical') {
         setEmotionalTone(prev => Math.max(20, prev - 15));
-      } else if (aiResponse.emotion === 'positive') {
+      } else if (response.ai_message.emotion === 'positive') {
         setEmotionalTone(prev => Math.min(90, prev + 10));
       } else {
         setEmotionalTone(prev => prev + (Math.random() - 0.5) * 10);
       }
 
-      // Update strategic alignment based on message length and keywords
-      const hasStrategicKeywords = currentMessage.toLowerCase().includes('estrategia') ||
-                                  currentMessage.toLowerCase().includes('objetivo') ||
-                                  currentMessage.toLowerCase().includes('plan') ||
-                                  currentMessage.toLowerCase().includes('riesgo');
+      // Update strategic alignment based on message characteristics
+      const hasStrategicKeywords = messageContent.toLowerCase().includes('estrategia') ||
+                                  messageContent.toLowerCase().includes('objetivo') ||
+                                  messageContent.toLowerCase().includes('plan') ||
+                                  messageContent.toLowerCase().includes('riesgo');
       
-      if (hasStrategicKeywords && currentMessage.length > 50) {
+      if (hasStrategicKeywords && messageContent.length > 50) {
         setStrategicAlignment(prev => Math.min(100, prev + 5));
-      } else if (currentMessage.length < 20) {
+      } else if (messageContent.length < 20) {
         setStrategicAlignment(prev => Math.max(30, prev - 3));
       }
-    }, 1500 + Math.random() * 2000);
+      
+    } catch (err) {
+      console.error('Error sending message:', err);
+      // Add error message
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        sender: 'ai',
+        content: 'Disculpe, hubo un problema técnico. ¿Podría repetir su mensaje?',
+        timestamp: new Date(),
+        emotion: 'neutral'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsAiTyping(false);
+    }
   };
 
-  const handleEndSimulation = () => {
-    const duration = Math.round((currentTime.getTime() - startTime.getTime()) / 1000 / 60);
-    onEndSimulation(messages, duration);
+  const handleEndSimulation = async () => {
+    if (!simulation) return;
+    
+    try {
+      const duration = Math.round((currentTime.getTime() - startTime.getTime()) / 1000 / 60);
+      
+      // End simulation via API
+      const result = await apiService.endSimulation(simulation.id);
+      
+      // Pass the analysis data to the feedback view
+      onEndSimulation(messages, duration);
+    } catch (err) {
+      console.error('Error ending simulation:', err);
+      // Still proceed to feedback view even if API call fails
+      const duration = Math.round((currentTime.getTime() - startTime.getTime()) / 1000 / 60);
+      onEndSimulation(messages, duration);
+    }
   };
 
   const getElapsedTime = () => {
@@ -243,6 +278,32 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
     if (alignment >= 60) return 'text-yellow-400';
     return 'text-orange-400';
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+        <div className="text-center text-white">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
+          <h3 className="text-xl font-semibold mb-2">Iniciando Simulación</h3>
+          <p className="text-white/70">Preparando entorno de aprendizaje...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
+        <div className="text-center text-white">
+          <h3 className="text-xl font-semibold mb-2 text-red-300">Error al Iniciar Simulación</h3>
+          <p className="text-white/70 mb-4">{error}</p>
+          <Button onClick={onBackToDashboard} className="bg-white text-gray-900 hover:bg-gray-100">
+            Volver al Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ minHeight: 'calc(100vh - 80px)' }}>

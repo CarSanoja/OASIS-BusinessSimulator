@@ -28,7 +28,8 @@ class SimulationSerializer(serializers.ModelSerializer):
 class SimulationCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Simulation
-        fields = ['scenario', 'custom_simulation']
+        fields = ['id', 'scenario', 'custom_simulation', 'status', 'started_at']
+        read_only_fields = ['id', 'status', 'started_at']
     
     def validate(self, data):
         # Must have either scenario or custom_simulation, but not both

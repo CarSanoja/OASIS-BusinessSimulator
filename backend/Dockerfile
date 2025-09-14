@@ -8,15 +8,17 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     postgresql-client \
+    netcat-traditional \
     && rm -rf /var/lib/apt/lists/*
 
-COPY Pipfile Pipfile.lock ./
-RUN pip install pipenv && pipenv install --system --deploy
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
-
-RUN python manage.py collectstatic --noinput
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 8000
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "oasis.wsgi:application"]

@@ -1,0 +1,140 @@
+[
+  {
+    "model": "scenarios.scenario",
+    "pk": 1,
+    "fields": {
+      "title": "Negociación de Fusión y Adquisición",
+      "category": "Estrategia Corporativa",
+      "description": "Negocia la adquisición de una startup fintech latinoamericana, navegando valoraciones, due diligence y términos de integración en un mercado emergente.",
+      "difficulty": "Avanzado",
+      "duration": "25-35 min",
+      "participants": "CEO de startup, CFO, Equipo legal",
+      "objectives": [
+        "Adquirir la empresa por menos de $15M USD",
+        "Retener al menos 90% del equipo técnico clave",
+        "Establecer sinergia operacional en 8 meses",
+        "Asegurar compliance regulatorio en 3 países"
+      ],
+      "skills": ["Negociación estratégica", "Análisis financiero", "Gestión de riesgos", "M&A"],
+      "image_url": "https://images.unsplash.com/photo-1551135049-8a33b5883817?w=400",
+      "is_featured": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "scenarios.scenario",
+    "pk": 2,
+    "fields": {
+      "title": "Liderazgo en Crisis Corporativa",
+      "category": "Liderazgo Ejecutivo",
+      "description": "Lideras una empresa durante una crisis de reputación y caída de ventas del 40%. Debes tomar decisiones críticas mientras mantienes la moral del equipo.",
+      "difficulty": "Avanzado",
+      "duration": "20-30 min",
+      "participants": "Junta Directiva, VP Operaciones, Dir. Comunicaciones",
+      "objectives": [
+        "Estabilizar las operaciones en 30 días",
+        "Recuperar la confianza de stakeholders clave",
+        "Implementar plan de reestructuración",
+        "Mantener la motivación del equipo directivo"
+      ],
+      "skills": ["Liderazgo en crisis", "Comunicación estratégica", "Toma de decisiones", "Change management"],
+      "image_url": "https://images.unsplash.com/photo-1589639293663-f9399bb41721?w=400",
+      "is_featured": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "scenarios.scenario",
+    "pk": 3,
+    "fields": {
+      "title": "Pitch a Inversionistas Internacionales",
+      "category": "Emprendimiento",
+      "description": "Presenta tu startup de tecnología educativa a un fondo de venture capital de Silicon Valley. Necesitas asegurar una ronda Serie A de $5M.",
+      "difficulty": "Intermedio",
+      "duration": "18-25 min",
+      "participants": "Managing Partner, Investment Director, Associate",
+      "objectives": [
+        "Asegurar compromiso de inversión inicial",
+        "Demostrar tracción y métricas clave",
+        "Establecer valoración de $20M pre-money",
+        "Obtener mentoring estratégico del fondo"
+      ],
+      "skills": ["Storytelling", "Análisis de mercado", "Fundraising", "Presentación ejecutiva"],
+      "image_url": "https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=400",
+      "is_featured": false,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "scenarios.scenario",
+    "pk": 4,
+    "fields": {
+      "title": "Estrategia de Expansión Internacional",
+      "category": "Estrategia Global",
+      "description": "Como VP de Estrategia, desarrollas el plan de expansión de tu empresa de retail a Brasil y México, navegando regulaciones y diferencias culturales.",
+      "difficulty": "Avanzado",
+      "duration": "30-40 min",
+      "participants": "CEO, CFO, Dir. Legal, Consultor Local",
+      "objectives": [
+        "Definir modo de entrada en cada mercado",
+        "Establecer presupuesto de $10M para 2 años",
+        "Identificar socios estratégicos locales",
+        "Crear timeline de implementación realista"
+      ],
+      "skills": ["Estrategia internacional", "Análisis de mercados", "Cross-cultural management", "Joint ventures"],
+      "image_url": "https://images.unsplash.com/photo-1681505526188-b05e68c77582?w=400",
+      "is_featured": false,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "scenarios.scenario",
+    "pk": 5,
+    "fields": {
+      "title": "Gestión de Desempeño Ejecutivo",
+      "category": "Gestión de Talento",
+      "description": "Conduces una reunión crítica de evaluación con un VP de Ventas que no está cumpliendo objetivos pero tiene 15 años en la empresa.",
+      "difficulty": "Intermedio",
+      "duration": "15-20 min",
+      "participants": "VP de Ventas, Dir. RRHH",
+      "objectives": [
+        "Mejorar desempeño en próximos 90 días",
+        "Mantener relación profesional constructiva",
+        "Establecer plan de desarrollo claro",
+        "Evitar rotación de talento clave"
+      ],
+      "skills": ["Performance management", "Feedback constructivo", "Coaching ejecutivo", "Gestión de conflictos"],
+      "image_url": "https://images.unsplash.com/photo-1633307057722-a4740ba0c5d0?w=400",
+      "is_featured": false,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  },
+  {
+    "model": "scenarios.scenario",
+    "pk": 6,
+    "fields": {
+      "title": "Planificación Estratégica con Junta Directiva",
+      "category": "Gobernanza Corporativa",
+      "description": "Presentas el plan estratégico quinquenal a la Junta Directiva, incluyendo nuevas líneas de negocio y transformación digital.",
+      "difficulty": "Avanzado",
+      "duration": "35-45 min",
+      "participants": "Presidente de Junta, Directores Independientes, Auditor",
+      "objectives": [
+        "Obtener aprobación del plan estratégico",
+        "Asegurar presupuesto de $50M para transformación",
+        "Establecer nuevos KPIs corporativos",
+        "Definir estructura de incentivos ejecutivos"
+      ],
+      "skills": ["Strategic planning", "Gobernanza", "Presentación a directorio", "Corporate finance"],
+      "image_url": "https://images.unsplash.com/photo-1533749871411-5e21e14bcc7d?w=400",
+      "is_featured": false,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  }
+]

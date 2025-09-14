@@ -33,7 +33,6 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lamb
 # Application definition
 
 INSTALLED_APPS = [
-    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -45,19 +44,20 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'djoser',
-    'channels',
     
     # Local apps
     'authentication',
     'scenarios',
     'simulations',
     'analytics',
+    'ai_service',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -84,17 +84,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'oasis.wsgi.application'
-ASGI_APPLICATION = 'oasis.asgi.application'
-
-# Channels
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [(config('REDIS_URL', default='redis://localhost:6379/0'))],
-        },
-    },
-}
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
@@ -105,7 +94,7 @@ DATABASES = {
         'NAME': config('DB_NAME', default='oasis'),
         'USER': config('DB_USER', default='oasis'),
         'PASSWORD': config('DB_PASSWORD', default='oasis'),
-        'HOST': config('DB_HOST', default='localhost'),
+        'HOST': config('DB_HOST', default='db'),
         'PORT': config('DB_PORT', default='5432'),
     }
 }

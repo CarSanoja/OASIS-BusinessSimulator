@@ -266,7 +266,8 @@ interface CustomSimulation {
 ### 6. Key Integration Points
 
 #### AI Service Requirements
-- Natural language processing for chat interactions
+- Langraph for agents, with model routing between openai (gpt-5-nano) and gemini 
+- postgres database must be vectorized, all text data must have senior logic for text vector information indexing and chunks in teh models
 - Personality-based response generation
 - Emotion detection from text
 - Objective progress analysis

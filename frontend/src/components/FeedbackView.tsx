@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -9,7 +10,6 @@ import {
   TrendingDown, 
   Target, 
   MessageSquare, 
-  Clock, 
   Star,
   BarChart3,
   CheckCircle2,
@@ -20,6 +20,7 @@ import {
   Bot
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { apiService, type SimulationAnalysis } from "../services/api";
 
 interface Message {
   id: string;
@@ -46,6 +47,7 @@ interface FeedbackViewProps {
   messages: Message[];
   duration: number;
   scenarioTitle: string;
+  simulationId?: number;
   onBackToDashboard: () => void;
   onRestartSimulation: () => void;
 }
@@ -53,12 +55,77 @@ interface FeedbackViewProps {
 export function FeedbackView({ 
   messages, 
   duration, 
-  scenarioTitle, 
+  scenarioTitle,
+  simulationId,
   onBackToDashboard, 
   onRestartSimulation 
 }: FeedbackViewProps) {
   
-  // Generate mock feedback data based on messages
+  const [feedback, setFeedback] = useState<FeedbackData | null>(null);
+  const [transcript, setTranscript] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadAnalysisData = async () => {
+      if (!simulationId) {
+        // Fallback to mock data if no simulation ID
+        setFeedback(generateFeedbackData());
+        setTranscript(messages);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        
+        // Load analysis from API
+        const analysis = await apiService.getSimulationAnalysis(simulationId);
+        
+        // Load transcript from API
+        const transcriptResponse = await apiService.getSimulationTranscript(simulationId);
+        
+        // Convert API data to FeedbackData format
+        const feedbackData: FeedbackData = {
+          overallScore: analysis.overall_score,
+          strategicScore: analysis.strategic_score,
+          communicationScore: analysis.communication_score,
+          emotionalScore: analysis.emotional_score,
+          strengths: analysis.strengths,
+          improvements: analysis.improvements,
+          recommendations: analysis.recommendations,
+          keyMoments: analysis.key_moments,
+          tacticsUsed: analysis.tactics_used,
+          sentimentData: generateSentimentData(transcriptResponse.transcript)
+        };
+        
+        setFeedback(feedbackData);
+        setTranscript(transcriptResponse.transcript);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load analysis');
+        console.error('Error loading analysis:', err);
+        // Fallback to mock data
+        setFeedback(generateFeedbackData());
+        setTranscript(messages);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadAnalysisData();
+  }, [simulationId, messages]);
+
+  const generateSentimentData = (transcript: any[]) => {
+    return transcript
+      .filter(msg => msg.sender === 'user')
+      .map((_, index) => ({
+        time: `${index * 3 + 1}min`,
+        sentiment: 50 + Math.sin(index * 0.8) * 30 + Math.random() * 10
+      }));
+  };
+  
+  // Generate mock feedback data based on messages (fallback)
   const generateFeedbackData = (): FeedbackData => {
     const userMessages = messages.filter(m => m.sender === 'user');
     const messageCount = userMessages.length;
@@ -126,7 +193,40 @@ export function FeedbackView({
     };
   };
 
-  const feedback = generateFeedbackData();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h3 className="text-xl font-semibold mb-2">Generando Análisis</h3>
+          <p className="text-gray-600">Analizando tu desempeño con IA...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold mb-2 text-red-600">Error al Cargar Análisis</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={onBackToDashboard}>Volver al Dashboard</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!feedback) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold mb-2">No hay datos de análisis</h3>
+          <Button onClick={onBackToDashboard}>Volver al Dashboard</Button>
+        </div>
+      </div>
+    );
+  }
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return 'text-green-600';

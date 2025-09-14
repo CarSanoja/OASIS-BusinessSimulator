@@ -36,11 +36,12 @@ class CustomSimulationCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomSimulation
         fields = [
-            'title', 'description', 'category', 'difficulty',
+            'id', 'title', 'description', 'category', 'difficulty',
             'skills', 'user_role', 'ai_role', 'ai_personality',
             'ai_objectives', 'user_objectives', 'end_conditions',
-            'knowledge_base', 'is_published'
+            'knowledge_base', 'is_published', 'created_at'
         ]
+        read_only_fields = ['id', 'created_at']
     
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user

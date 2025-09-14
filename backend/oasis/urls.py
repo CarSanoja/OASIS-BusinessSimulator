@@ -25,6 +25,7 @@ urlpatterns = [
     path('api/scenarios/', include('scenarios.urls')),
     path('api/simulations/', include('simulations.urls')),
     path('api/analytics/', include('analytics.urls')),
+    path('api/notifications/', include('notifications.urls')),
 ]
 
 if settings.DEBUG:

@@ -1,6 +1,6 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -54,3 +54,21 @@ def demo_login(request):
         {'error': 'Invalid credentials'}, 
         status=status.HTTP_401_UNAUTHORIZED
     )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def logout(request):
+    """
+    Logout endpoint - invalidate refresh token
+    """
+    try:
+        refresh_token = request.data.get('refresh')
+        if refresh_token:
+            from rest_framework_simplejwt.tokens import RefreshToken
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        
+        return Response({'message': 'Successfully logged out'})
+    except Exception as e:
+        return Response({'message': 'Logged out'})  # Always return success for logout

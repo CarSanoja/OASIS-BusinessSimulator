@@ -1,127 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Users, TrendingUp, Lightbulb, Clock, Target, BarChart3, Building2, Globe, Search, Filter, Star, Play, BookOpen, Award, Zap, ChevronRight, ArrowRight, Plus, Settings, Sparkles } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { apiService, type Scenario, type CustomSimulation } from "../services/api";
 
-interface Scenario {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  difficulty: 'Principiante' | 'Intermedio' | 'Avanzado';
-  duration: string;
-  participants: string;
-  image: string;
-  objectives: string[];
-  skills: string[];
-}
-
-const scenarios: Scenario[] = [
-  {
-    id: 'merger-negotiation',
-    title: 'Negociación de Fusión y Adquisición',
-    category: 'Estrategia Corporativa',
-    description: 'Negocia la adquisición de una startup fintech latinoamericana, navegando valoraciones, due diligence y términos de integración en un mercado emergente.',
-    difficulty: 'Avanzado',
-    duration: '25-35 min',
-    participants: 'CEO de startup, CFO, Equipo legal',
-    image: 'https://images.unsplash.com/photo-1551135049-8a33b5883817?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMG5lZ290aWF0aW9uJTIwbWVldGluZ3xlbnwxfHx8fDE3NTc4NTQzNjV8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    objectives: [
-      'Adquirir la empresa por menos de $15M USD',
-      'Retener al menos 90% del equipo técnico clave',
-      'Establecer sinergia operacional en 8 meses',
-      'Asegurar compliance regulatorio en 3 países'
-    ],
-    skills: ['Negociación estratégica', 'Análisis financiero', 'Gestión de riesgos', 'M&A']
-  },
-  {
-    id: 'crisis-leadership',
-    title: 'Liderazgo en Crisis Corporativa',
-    category: 'Liderazgo Ejecutivo',
-    description: 'Lideras una empresa durante una crisis de reputación y caída de ventas del 40%. Debes tomar decisiones críticas mientras mantienes la moral del equipo.',
-    difficulty: 'Avanzado',
-    duration: '20-30 min',
-    participants: 'Junta Directiva, VP Operaciones, Dir. Comunicaciones',
-    image: 'https://images.unsplash.com/photo-1589639293663-f9399bb41721?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcmlzaXMlMjBtYW5hZ2VtZW50JTIwYm9hcmRyb29tfGVufDF8fHx8MTc1Nzg1NDYzM3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    objectives: [
-      'Estabilizar las operaciones en 30 días',
-      'Recuperar la confianza de stakeholders clave',
-      'Implementar plan de reestructuración',
-      'Mantener la motivación del equipo directivo'
-    ],
-    skills: ['Liderazgo en crisis', 'Comunicación estratégica', 'Toma de decisiones', 'Change management']
-  },
-  {
-    id: 'startup-pitch',
-    title: 'Pitch a Inversionistas Internacionales',
-    category: 'Emprendimiento',
-    description: 'Presenta tu startup de tecnología educativa a un fondo de venture capital de Silicon Valley. Necesitas asegurar una ronda Serie A de $5M.',
-    difficulty: 'Intermedio',
-    duration: '18-25 min',
-    participants: 'Managing Partner, Investment Director, Associate',
-    image: 'https://images.unsplash.com/photo-1591115765373-5207764f72e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdGFydHVwJTIwcGl0Y2glMjBpbnZlc3RvciUyMG1lZXRpbmd8ZW58MXx8fHwxNzU3ODU0NjMwfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    objectives: [
-      'Asegurar compromiso de inversión inicial',
-      'Demostrar tracción y métricas clave',
-      'Establecer valoración de $20M pre-money',
-      'Obtener mentoring estratégico del fondo'
-    ],
-    skills: ['Storytelling', 'Análisis de mercado', 'Fundraising', 'Presentación ejecutiva']
-  },
-  {
-    id: 'international-expansion',
-    title: 'Estrategia de Expansión Internacional',
-    category: 'Estrategia Global',
-    description: 'Como VP de Estrategia, desarrollas el plan de expansión de tu empresa de retail a Brasil y México, navegando regulaciones y diferencias culturales.',
-    difficulty: 'Avanzado',
-    duration: '30-40 min',
-    participants: 'CEO, CFO, Dir. Legal, Consultor Local',
-    image: 'https://images.unsplash.com/photo-1681505526188-b05e68c77582?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbnRlcm5hdGlvbmFsJTIwYnVzaW5lc3MlMjBuZWdvdGlhdGlvbnxlbnwxfHx8fDE3NTc4NTQ2NDF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    objectives: [
-      'Definir modo de entrada en cada mercado',
-      'Establecer presupuesto de $10M para 2 años',
-      'Identificar socios estratégicos locales',
-      'Crear timeline de implementación realista'
-    ],
-    skills: ['Estrategia internacional', 'Análisis de mercados', 'Cross-cultural management', 'Joint ventures']
-  },
-  {
-    id: 'team-performance',
-    title: 'Gestión de Desempeño Ejecutivo',
-    category: 'Gestión de Talento',
-    description: 'Conduces una reunión crítica de evaluación con un VP de Ventas que no está cumpliendo objetivos pero tiene 15 años en la empresa.',
-    difficulty: 'Intermedio',
-    duration: '15-20 min',
-    participants: 'VP de Ventas, Dir. RRHH',
-    image: 'https://images.unsplash.com/photo-1633307057722-a4740ba0c5d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0ZWFtJTIwcGVyZm9ybWFuY2UlMjByZXZpZXd8ZW58MXx8fHwxNzU3ODU0NjQ0fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    objectives: [
-      'Mejorar desempeño en próximos 90 días',
-      'Mantener relación profesional constructiva',
-      'Establecer plan de desarrollo claro',
-      'Evitar rotación de talento clave'
-    ],
-    skills: ['Performance management', 'Feedback constructivo', 'Coaching ejecutivo', 'Gestión de conflictos']
-  },
-  {
-    id: 'board-strategic-planning',
-    title: 'Planificación Estratégica con Junta Directiva',
-    category: 'Gobernanza Corporativa',
-    description: 'Presentas el plan estratégico quinquenal a la Junta Directiva, incluyendo nuevas líneas de negocio y transformación digital.',
-    difficulty: 'Avanzado',
-    duration: '35-45 min',
-    participants: 'Presidente de Junta, Directores Independientes, Auditor',
-    image: 'https://images.unsplash.com/photo-1533749871411-5e21e14bcc7d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb3Jwb3JhdGUlMjBzdHJhdGVneSUyMHBsYW5uaW5nfGVufDF8fHx8MTc1Nzg1NDYzOHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-    objectives: [
-      'Obtener aprobación del plan estratégico',
-      'Asegurar presupuesto de $50M para transformación',
-      'Establecer nuevos KPIs corporativos',
-      'Definir estructura de incentivos ejecutivos'
-    ],
-    skills: ['Strategic planning', 'Gobernanza', 'Presentación a directorio', 'Corporate finance']
-  }
-];
+// Remove hardcoded scenarios - will be loaded from API
 
 interface LearningPath {
   id: string;
@@ -203,6 +88,45 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [activeSection, setActiveSection] = useState<'featured' | 'paths' | 'library'>('featured');
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [featuredScenarios, setFeaturedScenarios] = useState<Scenario[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load data from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        
+        // Load scenarios
+        const scenariosResponse = await apiService.getScenarios({
+          category: selectedCategory,
+          difficulty: selectedDifficulty,
+          search: searchTerm
+        });
+        setScenarios(scenariosResponse.results);
+
+        // Load featured scenarios
+        const featuredResponse = await apiService.getFeaturedScenarios();
+        setFeaturedScenarios(featuredResponse);
+
+        // Load categories
+        const categoriesResponse = await apiService.getCategories();
+        setCategories(categoriesResponse);
+
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+        console.error('Error loading dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [selectedCategory, selectedDifficulty, searchTerm]);
 
   const getDifficultyStars = (difficulty: string) => {
     const stars = difficulty === 'Principiante' ? 1 : difficulty === 'Intermedio' ? 2 : 3;
@@ -226,18 +150,8 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
     }
   };
 
-  const filteredScenarios = scenarios.filter(scenario => {
-    const matchesSearch = scenario.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         scenario.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         scenario.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesCategory = selectedCategory === 'all' || scenario.category === selectedCategory;
-    const matchesDifficulty = selectedDifficulty === 'all' || scenario.difficulty === selectedDifficulty;
-    
-    return matchesSearch && matchesCategory && matchesDifficulty;
-  });
-
-  const categories = Array.from(new Set(scenarios.map(s => s.category)));
+  // Filter scenarios (filtering is now done by API, but keep for client-side search)
+  const filteredScenarios = scenarios;
   const difficulties = ['Principiante', 'Intermedio', 'Avanzado'];
 
   return (
@@ -634,18 +548,27 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                       </div>
                       
                       <Button 
-                        onClick={() => onStartSimulation(scenarios.find(s => s.id === 'crisis-leadership')!)}
+                        onClick={() => {
+                          const crisisScenario = featuredScenarios.find(s => s.title.includes('Crisis'));
+                          if (crisisScenario) {
+                            onStartSimulation({
+                              ...crisisScenario,
+                              image: crisisScenario.image_url || ''
+                            });
+                          }
+                        }}
                         size="lg"
                         className="bg-white text-red-600 hover:bg-red-50 font-semibold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                        disabled={loading || featuredScenarios.length === 0}
                       >
                         <Play className="h-5 w-5 mr-2" />
-                        Aceptar el Desafío
+                        {loading ? 'Cargando...' : 'Aceptar el Desafío'}
                       </Button>
                     </div>
                     
                     <div className="relative">
                       <ImageWithFallback
-                        src={scenarios.find(s => s.id === 'crisis-leadership')?.image || ''}
+                        src={featuredScenarios.find(s => s.title.includes('Crisis'))?.image_url || 'https://images.unsplash.com/photo-1589639293663-f9399bb41721?w=400'}
                         alt="Crisis Leadership"
                         className="w-full h-80 object-cover rounded-2xl shadow-2xl"
                       />

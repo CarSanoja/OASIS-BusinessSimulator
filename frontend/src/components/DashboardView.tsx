@@ -1,0 +1,916 @@
+import { useState } from "react";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Users, TrendingUp, Lightbulb, Clock, Target, BarChart3, Building2, Globe, Search, Filter, Star, Play, BookOpen, Award, Zap, ChevronRight, ArrowRight, Plus, Settings, Sparkles } from "lucide-react";
+import { ImageWithFallback } from "./figma/ImageWithFallback";
+
+interface Scenario {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  difficulty: 'Principiante' | 'Intermedio' | 'Avanzado';
+  duration: string;
+  participants: string;
+  image: string;
+  objectives: string[];
+  skills: string[];
+}
+
+const scenarios: Scenario[] = [
+  {
+    id: 'merger-negotiation',
+    title: 'Negociación de Fusión y Adquisición',
+    category: 'Estrategia Corporativa',
+    description: 'Negocia la adquisición de una startup fintech latinoamericana, navegando valoraciones, due diligence y términos de integración en un mercado emergente.',
+    difficulty: 'Avanzado',
+    duration: '25-35 min',
+    participants: 'CEO de startup, CFO, Equipo legal',
+    image: 'https://images.unsplash.com/photo-1551135049-8a33b5883817?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMG5lZ290aWF0aW9uJTIwbWVldGluZ3xlbnwxfHx8fDE3NTc4NTQzNjV8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    objectives: [
+      'Adquirir la empresa por menos de $15M USD',
+      'Retener al menos 90% del equipo técnico clave',
+      'Establecer sinergia operacional en 8 meses',
+      'Asegurar compliance regulatorio en 3 países'
+    ],
+    skills: ['Negociación estratégica', 'Análisis financiero', 'Gestión de riesgos', 'M&A']
+  },
+  {
+    id: 'crisis-leadership',
+    title: 'Liderazgo en Crisis Corporativa',
+    category: 'Liderazgo Ejecutivo',
+    description: 'Lideras una empresa durante una crisis de reputación y caída de ventas del 40%. Debes tomar decisiones críticas mientras mantienes la moral del equipo.',
+    difficulty: 'Avanzado',
+    duration: '20-30 min',
+    participants: 'Junta Directiva, VP Operaciones, Dir. Comunicaciones',
+    image: 'https://images.unsplash.com/photo-1589639293663-f9399bb41721?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjcmlzaXMlMjBtYW5hZ2VtZW50JTIwYm9hcmRyb29tfGVufDF8fHx8MTc1Nzg1NDYzM3ww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    objectives: [
+      'Estabilizar las operaciones en 30 días',
+      'Recuperar la confianza de stakeholders clave',
+      'Implementar plan de reestructuración',
+      'Mantener la motivación del equipo directivo'
+    ],
+    skills: ['Liderazgo en crisis', 'Comunicación estratégica', 'Toma de decisiones', 'Change management']
+  },
+  {
+    id: 'startup-pitch',
+    title: 'Pitch a Inversionistas Internacionales',
+    category: 'Emprendimiento',
+    description: 'Presenta tu startup de tecnología educativa a un fondo de venture capital de Silicon Valley. Necesitas asegurar una ronda Serie A de $5M.',
+    difficulty: 'Intermedio',
+    duration: '18-25 min',
+    participants: 'Managing Partner, Investment Director, Associate',
+    image: 'https://images.unsplash.com/photo-1591115765373-5207764f72e7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxzdGFydHVwJTIwcGl0Y2glMjBpbnZlc3RvciUyMG1lZXRpbmd8ZW58MXx8fHwxNzU3ODU0NjMwfDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    objectives: [
+      'Asegurar compromiso de inversión inicial',
+      'Demostrar tracción y métricas clave',
+      'Establecer valoración de $20M pre-money',
+      'Obtener mentoring estratégico del fondo'
+    ],
+    skills: ['Storytelling', 'Análisis de mercado', 'Fundraising', 'Presentación ejecutiva']
+  },
+  {
+    id: 'international-expansion',
+    title: 'Estrategia de Expansión Internacional',
+    category: 'Estrategia Global',
+    description: 'Como VP de Estrategia, desarrollas el plan de expansión de tu empresa de retail a Brasil y México, navegando regulaciones y diferencias culturales.',
+    difficulty: 'Avanzado',
+    duration: '30-40 min',
+    participants: 'CEO, CFO, Dir. Legal, Consultor Local',
+    image: 'https://images.unsplash.com/photo-1681505526188-b05e68c77582?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxpbnRlcm5hdGlvbmFsJTIwYnVzaW5lc3MlMjBuZWdvdGlhdGlvbnxlbnwxfHx8fDE3NTc4NTQ2NDF8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    objectives: [
+      'Definir modo de entrada en cada mercado',
+      'Establecer presupuesto de $10M para 2 años',
+      'Identificar socios estratégicos locales',
+      'Crear timeline de implementación realista'
+    ],
+    skills: ['Estrategia internacional', 'Análisis de mercados', 'Cross-cultural management', 'Joint ventures']
+  },
+  {
+    id: 'team-performance',
+    title: 'Gestión de Desempeño Ejecutivo',
+    category: 'Gestión de Talento',
+    description: 'Conduces una reunión crítica de evaluación con un VP de Ventas que no está cumpliendo objetivos pero tiene 15 años en la empresa.',
+    difficulty: 'Intermedio',
+    duration: '15-20 min',
+    participants: 'VP de Ventas, Dir. RRHH',
+    image: 'https://images.unsplash.com/photo-1633307057722-a4740ba0c5d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHx0ZWFtJTIwcGVyZm9ybWFuY2UlMjByZXZpZXd8ZW58MXx8fHwxNzU3ODU0NjQ0fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    objectives: [
+      'Mejorar desempeño en próximos 90 días',
+      'Mantener relación profesional constructiva',
+      'Establecer plan de desarrollo claro',
+      'Evitar rotación de talento clave'
+    ],
+    skills: ['Performance management', 'Feedback constructivo', 'Coaching ejecutivo', 'Gestión de conflictos']
+  },
+  {
+    id: 'board-strategic-planning',
+    title: 'Planificación Estratégica con Junta Directiva',
+    category: 'Gobernanza Corporativa',
+    description: 'Presentas el plan estratégico quinquenal a la Junta Directiva, incluyendo nuevas líneas de negocio y transformación digital.',
+    difficulty: 'Avanzado',
+    duration: '35-45 min',
+    participants: 'Presidente de Junta, Directores Independientes, Auditor',
+    image: 'https://images.unsplash.com/photo-1533749871411-5e21e14bcc7d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb3Jwb3JhdGUlMjBzdHJhdGVneSUyMHBsYW5uaW5nfGVufDF8fHx8MTc1Nzg1NDYzOHww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
+    objectives: [
+      'Obtener aprobación del plan estratégico',
+      'Asegurar presupuesto de $50M para transformación',
+      'Establecer nuevos KPIs corporativos',
+      'Definir estructura de incentivos ejecutivos'
+    ],
+    skills: ['Strategic planning', 'Gobernanza', 'Presentación a directorio', 'Corporate finance']
+  }
+];
+
+interface LearningPath {
+  id: string;
+  title: string;
+  description: string;
+  scenarios: string[];
+  totalTime: string;
+  difficulty: string;
+  icon: string;
+  color: string;
+}
+
+const learningPaths: LearningPath[] = [
+  {
+    id: 'leadership-mastery',
+    title: 'Maestría en Liderazgo Ejecutivo',
+    description: 'De gerente a CEO: desarrolla las competencias críticas para liderar organizaciones complejas',
+    scenarios: ['crisis-leadership', 'team-performance', 'board-strategic-planning'],
+    totalTime: '2-3 horas',
+    difficulty: 'Avanzado',
+    icon: '👑',
+    color: 'from-purple-600 to-pink-600'
+  },
+  {
+    id: 'strategic-thinking',
+    title: 'MBA en Estrategia Corporativa',
+    description: 'Construye músculos estratégicos para decisiones de alto impacto en mercados competitivos',
+    scenarios: ['merger-negotiation', 'international-expansion', 'board-strategic-planning'],
+    totalTime: '3-4 horas',
+    difficulty: 'Avanzado',
+    icon: '🎯',
+    color: 'from-blue-600 to-cyan-600'
+  },
+  {
+    id: 'entrepreneur-journey',
+    title: 'El Camino del Emprendedor',
+    description: 'De la idea al exit: navega el ecosistema emprendedor desde pitch hasta adquisición',
+    scenarios: ['startup-pitch', 'merger-negotiation', 'crisis-leadership'],
+    totalTime: '2-3 horas',
+    difficulty: 'Intermedio',
+    icon: '🚀',
+    color: 'from-orange-600 to-red-600'
+  }
+];
+
+interface CustomSimulation {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: string;
+  skills: string[];
+  userRole: string;
+  aiRole: string;
+  aiPersonality: {
+    analytical: number;
+    patience: number;
+    aggression: number;
+    flexibility: number;
+  };
+  aiObjectives: string[];
+  userObjectives: string[];
+  endConditions: string[];
+  knowledgeBase?: string;
+  isPublished: boolean;
+  createdBy: string;
+  createdAt: Date;
+}
+
+interface DashboardViewProps {
+  onStartSimulation: (scenario: Scenario) => void;
+  onViewProgress: () => void;
+  onViewCreator: () => void;
+  customSimulations: CustomSimulation[];
+}
+
+export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator, customSimulations }: DashboardViewProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
+  const [activeSection, setActiveSection] = useState<'featured' | 'paths' | 'library'>('featured');
+
+  const getDifficultyStars = (difficulty: string) => {
+    const stars = difficulty === 'Principiante' ? 1 : difficulty === 'Intermedio' ? 2 : 3;
+    return Array.from({ length: 3 }, (_, i) => (
+      <Star 
+        key={i} 
+        className={`h-3 w-3 ${i < stars ? 'fill-current text-yellow-400' : 'text-gray-400'}`} 
+      />
+    ));
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Estrategia Corporativa': return <Building2 className="h-4 w-4" />;
+      case 'Liderazgo Ejecutivo': return <Users className="h-4 w-4" />;
+      case 'Emprendimiento': return <Lightbulb className="h-4 w-4" />;
+      case 'Estrategia Global': return <Globe className="h-4 w-4" />;
+      case 'Gestión de Talento': return <TrendingUp className="h-4 w-4" />;
+      case 'Gobernanza Corporativa': return <BarChart3 className="h-4 w-4" />;
+      default: return <Building2 className="h-4 w-4" />;
+    }
+  };
+
+  const filteredScenarios = scenarios.filter(scenario => {
+    const matchesSearch = scenario.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         scenario.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         scenario.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesCategory = selectedCategory === 'all' || scenario.category === selectedCategory;
+    const matchesDifficulty = selectedDifficulty === 'all' || scenario.difficulty === selectedDifficulty;
+    
+    return matchesSearch && matchesCategory && matchesDifficulty;
+  });
+
+  const categories = Array.from(new Set(scenarios.map(s => s.category)));
+  const difficulties = ['Principiante', 'Intermedio', 'Avanzado'];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-white">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-purple-600/5 to-cyan-600/5"></div>
+        <div className="relative max-w-7xl mx-auto px-6 py-16">
+          <div className="text-center max-w-4xl mx-auto">
+            {/* Brand Header */}
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <div className="relative">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                  <span className="text-2xl font-bold text-white">O</span>
+                </div>
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+              </div>
+              <div className="text-left">
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                  OASIS
+                </h1>
+                <p className="text-sm text-gray-600 font-medium">by IESA Business School</p>
+              </div>
+            </div>
+
+            {/* Value Proposition */}
+            <div className="space-y-6 mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 leading-tight">
+                Tu Plataforma de
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Empoderamiento del Aprendizaje</span>
+              </h2>
+              <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
+                Experimenta el futuro del aprendizaje inmersivo con IA. Desde simulaciones ejecutivas hasta próximos módulos revolucionarios, 
+                OASIS transforma cómo desarrollas habilidades críticas para el éxito profesional.
+              </p>
+              
+              {/* Preview of upcoming features */}
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+                <Badge className="bg-blue-100 text-blue-800 border-blue-200 px-4 py-2">
+                  🎭 Role-Playing Ejecutivo <span className="ml-1 text-green-600">• Activo</span>
+                </Badge>
+                <Badge className="bg-gray-100 text-gray-600 border-gray-200 px-4 py-2">
+                  🧠 Coaching Inteligente <span className="ml-1 text-amber-600">• Próximamente</span>
+                </Badge>
+                <Badge className="bg-gray-100 text-gray-600 border-gray-200 px-4 py-2">
+                  📈 Análisis Predictivo <span className="ml-1 text-amber-600">• Próximamente</span>
+                </Badge>
+                <Badge className="bg-gray-100 text-gray-600 border-gray-200 px-4 py-2">
+                  🎯 Skill Assessment <span className="ml-1 text-amber-600">• Próximamente</span>
+                </Badge>
+              </div>
+            </div>
+
+            {/* CTA Section */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+              <Button 
+                onClick={() => setActiveSection('featured')}
+                size="lg"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+              >
+                <Play className="h-5 w-5 mr-2" />
+                Explorar Role-Playing
+              </Button>
+              <Button 
+                onClick={onViewProgress}
+                variant="outline"
+                size="lg"
+                className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-4 rounded-xl"
+              >
+                <BarChart3 className="h-5 w-5 mr-2" />
+                Mi Dashboard
+              </Button>
+            </div>
+
+            {/* Social Proof */}
+            <div className="flex items-center justify-center gap-8 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <Award className="h-4 w-4 text-yellow-500" />
+                <span>+2,500 profesionales empoderados</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-blue-500" />
+                <span>Módulo 1: Role-Playing activo</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-purple-500" />
+                <span>3 módulos más en desarrollo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 z-40">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center justify-between py-4">
+            <nav className="flex gap-1 bg-gray-100 rounded-lg p-1">
+              <button
+                onClick={() => setActiveSection('featured')}
+                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                  activeSection === 'featured'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🏆 Módulo Destacado
+              </button>
+              <button
+                onClick={() => setActiveSection('paths')}
+                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                  activeSection === 'paths'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🎯 Programas Estructurados
+              </button>
+              <button
+                onClick={() => setActiveSection('library')}
+                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                  activeSection === 'library'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                📚 Catálogo Completo
+              </button>
+            </nav>
+
+            {/* Creator Button */}
+            <Button 
+              onClick={onViewCreator}
+              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium px-6 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Crear Simulación
+            </Button>
+
+            {activeSection === 'library' && (
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <input
+                    placeholder="Buscar simulaciones..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas las categorías</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Upcoming Modules Preview */}
+      <div className="bg-gradient-to-r from-gray-50 to-blue-50 border-y border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">🚀 El Futuro del Aprendizaje Inmersivo</h3>
+            <p className="text-gray-600 max-w-3xl mx-auto">
+              OASIS está revolucionando el desarrollo profesional. Mientras disfrutas nuestro módulo de Role-Playing, 
+              estamos construyendo el futuro del aprendizaje personalizado.
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-4 right-4">
+                <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">Próximamente</Badge>
+              </div>
+              <div className="text-3xl mb-4">🧠</div>
+              <h4 className="text-lg font-bold text-gray-900 mb-2">AI Coaching Personalizado</h4>
+              <p className="text-gray-600 text-sm mb-4">
+                Coach inteligente que adapta el aprendizaje a tu estilo, fortalezas y áreas de oportunidad únicos.
+              </p>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                <span>En desarrollo activo</span>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-4 right-4">
+                <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">Q2 2024</Badge>
+              </div>
+              <div className="text-3xl mb-4">📊</div>
+              <h4 className="text-lg font-bold text-gray-900 mb-2">Analytics Predictivo</h4>
+              <p className="text-gray-600 text-sm mb-4">
+                Predicciones de rendimiento y recomendaciones de carrera basadas en tu progreso y mercado laboral.
+              </p>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                <span>Investigación y diseño</span>
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
+              <div className="absolute top-4 right-4">
+                <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">Q3 2024</Badge>
+              </div>
+              <div className="text-3xl mb-4">🎯</div>
+              <h4 className="text-lg font-bold text-gray-900 mb-2">Skill Assessment 360°</h4>
+              <p className="text-gray-600 text-sm mb-4">
+                Evaluación comprehensiva de competencias con feedback de pares, superiores y análisis de mercado.
+              </p>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
+                <span>Concepto y validación</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="text-center mt-8">
+            <p className="text-sm text-gray-500">
+              ¿Quieres ser parte del futuro? 
+              <a href="#" className="text-blue-600 hover:text-blue-700 font-medium ml-1">Únete a nuestro programa beta</a>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Custom Simulations Section */}
+      {customSimulations.length > 0 && (
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-y border-purple-200">
+          <div className="max-w-7xl mx-auto px-6 py-12">
+            <div className="text-center mb-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
+                <Sparkles className="h-6 w-6 text-purple-500" />
+                🎨 Tus Simulaciones Personalizadas
+              </h3>
+              <p className="text-gray-600 max-w-3xl mx-auto">
+                Experiencias de aprendizaje que creaste para ti y tu equipo
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {customSimulations.slice(0, 6).map((simulation) => (
+                <div key={simulation.id} className="bg-white rounded-2xl p-6 shadow-sm border border-purple-100 hover:shadow-lg transition-all duration-300 group">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center">
+                        <Settings className="h-5 w-5 text-white" />
+                      </div>
+                      <Badge className={`${
+                        simulation.difficulty === 'Principiante' ? 'bg-green-500/20 text-green-700' :
+                        simulation.difficulty === 'Intermedio' ? 'bg-yellow-500/20 text-yellow-700' :
+                        simulation.difficulty === 'Avanzado' ? 'bg-red-500/20 text-red-700' :
+                        'bg-purple-500/20 text-purple-700'
+                      }`}>
+                        {simulation.difficulty}
+                      </Badge>
+                    </div>
+                    <Badge className={`${
+                      simulation.isPublished 
+                        ? 'bg-green-100 text-green-800 border-green-200' 
+                        : 'bg-gray-100 text-gray-600 border-gray-200'
+                    } text-xs`}>
+                      {simulation.isPublished ? 'Publicado' : 'Borrador'}
+                    </Badge>
+                  </div>
+                  
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-purple-600 transition-colors">
+                    {simulation.title}
+                  </h4>
+                  
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {simulation.description}
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-1 mb-4">
+                    {simulation.skills.slice(0, 3).map((skill) => (
+                      <Badge key={skill} className="bg-purple-50 text-purple-700 border-purple-200 text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                    {simulation.skills.length > 3 && (
+                      <Badge className="bg-gray-50 text-gray-600 border-gray-200 text-xs">
+                        +{simulation.skills.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-500">
+                      {simulation.createdAt.toLocaleDateString()}
+                    </div>
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                      onClick={() => {
+                        // Convert custom simulation to standard scenario format
+                        const scenario = {
+                          id: simulation.id,
+                          title: simulation.title,
+                          category: simulation.category,
+                          description: simulation.description,
+                          difficulty: simulation.difficulty as 'Principiante' | 'Intermedio' | 'Avanzado',
+                          duration: '20-30 min',
+                          participants: 'Personalizado',
+                          image: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400',
+                          objectives: simulation.userObjectives,
+                          skills: simulation.skills
+                        };
+                        onStartSimulation(scenario);
+                      }}
+                    >
+                      <Play className="h-3 w-3 mr-1" />
+                      Iniciar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            {customSimulations.length > 6 && (
+              <div className="text-center mt-8">
+                <Button 
+                  variant="outline"
+                  className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                >
+                  Ver Todas las Simulaciones ({customSimulations.length})
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        {/* Featured Scenarios */}
+        {activeSection === 'featured' && (
+          <div className="space-y-16">
+            {/* Hero Scenario */}
+            <section>
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">🔥 Módulo Role-Playing: Escenario de la Semana</h3>
+                <p className="text-gray-600">El primer módulo de OASIS: simulaciones inmersivas para desarrollo de competencias ejecutivas</p>
+              </div>
+              
+              <div className="relative bg-gradient-to-r from-red-600 to-pink-600 rounded-3xl overflow-hidden shadow-2xl">
+                <div className="absolute inset-0 bg-black/20"></div>
+                <div className="relative p-12 text-white">
+                  <div className="grid lg:grid-cols-2 gap-12 items-center">
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-3">
+                        <Badge className="bg-red-500/20 text-red-200 border-red-300">
+                          <Users className="h-3 w-3 mr-1" />
+                          Liderazgo Ejecutivo
+                        </Badge>
+                        <div className="flex gap-1">
+                          {getDifficultyStars('Avanzado')}
+                        </div>
+                      </div>
+                      
+                      <h4 className="text-4xl font-bold leading-tight">
+                        Liderazgo en Crisis Corporativa
+                      </h4>
+                      
+                      <p className="text-xl text-red-100 leading-relaxed">
+                        Una crisis de reputación amenaza la supervivencia de tu empresa. Las acciones cayeron 40%, 
+                        los medios atacan, y tu equipo está en pánico. ¿Cómo lideras en el momento más crítico?
+                      </p>
+                      
+                      <div className="bg-red-500/20 backdrop-blur-sm rounded-xl p-4 border border-red-300/30">
+                        <p className="text-red-100 text-sm">
+                          <strong>Módulo Role-Playing:</strong> Experimenta decisiones de alto impacto en un entorno seguro. 
+                          Cada elección tiene consecuencias reales que afectan el resultado de la simulación.
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-6 text-red-200">
+                        <span className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          20-30 min
+                        </span>
+                        <span className="flex items-center gap-2">
+                          <Target className="h-4 w-4" />
+                          4 objetivos críticos
+                        </span>
+                      </div>
+                      
+                      <Button 
+                        onClick={() => onStartSimulation(scenarios.find(s => s.id === 'crisis-leadership')!)}
+                        size="lg"
+                        className="bg-white text-red-600 hover:bg-red-50 font-semibold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                      >
+                        <Play className="h-5 w-5 mr-2" />
+                        Aceptar el Desafío
+                      </Button>
+                    </div>
+                    
+                    <div className="relative">
+                      <ImageWithFallback
+                        src={scenarios.find(s => s.id === 'crisis-leadership')?.image || ''}
+                        alt="Crisis Leadership"
+                        className="w-full h-80 object-cover rounded-2xl shadow-2xl"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent rounded-2xl"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Quick Start Cards */}
+            <section>
+              <div className="text-center mb-8">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">⚡ Perfectos para Comenzar</h3>
+                <p className="text-gray-600">Simulaciones ideales para tu primera experiencia de aprendizaje inmersivo</p>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-8">
+                {scenarios.filter(s => s.difficulty === 'Intermedio').slice(0, 2).map((scenario, index) => (
+                  <div key={scenario.id} className="group bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100">
+                    <div className="relative h-48 overflow-hidden">
+                      <ImageWithFallback
+                        src={scenario.image}
+                        alt={scenario.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                      <div className="absolute top-4 left-4">
+                        <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30">
+                          {getCategoryIcon(scenario.category)}
+                          <span className="ml-1">{scenario.category}</span>
+                        </Badge>
+                      </div>
+                      <div className="absolute top-4 right-4 flex gap-1">
+                        {getDifficultyStars(scenario.difficulty)}
+                      </div>
+                    </div>
+                    
+                    <div className="p-6">
+                      <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                        {scenario.title}
+                      </h4>
+                      <p className="text-gray-600 mb-4 line-clamp-2">
+                        {scenario.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm text-gray-500 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {scenario.duration}
+                        </span>
+                        <Badge variant="outline" className="text-xs">
+                          {scenario.difficulty}
+                        </Badge>
+                      </div>
+                      
+                      <Button 
+                        onClick={() => onStartSimulation(scenario)}
+                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg"
+                      >
+                        Comenzar Simulación
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* Learning Paths */}
+        {activeSection === 'paths' && (
+          <div className="space-y-12">
+            <div className="text-center">
+              <h3 className="text-3xl font-bold text-gray-900 mb-4">🎯 Programas de Desarrollo Estructurados</h3>
+              <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+                Rutas de aprendizaje diseñadas por expertos del IESA que combinan múltiples simulaciones 
+                para el desarrollo integral de competencias profesionales críticas.
+              </p>
+              
+              {/* Coming Soon Banner */}
+              <div className="mt-6 inline-flex items-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-full px-4 py-2">
+                <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-amber-800 font-medium">
+                  Próximamente: Programas que integran múltiples módulos de aprendizaje
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-8">
+              {learningPaths.map((path, index) => (
+                <div key={path.id} className={`relative bg-gradient-to-r ${path.color} rounded-3xl overflow-hidden shadow-2xl`}>
+                  <div className="absolute inset-0 bg-black/10"></div>
+                  <div className="relative p-8 lg:p-12 text-white">
+                    <div className="grid lg:grid-cols-3 gap-8 items-center">
+                      <div className="lg:col-span-2 space-y-6">
+                        <div className="flex items-center gap-4">
+                          <div className="text-4xl">{path.icon}</div>
+                          <div>
+                            <h4 className="text-2xl lg:text-3xl font-bold">{path.title}</h4>
+                            <div className="flex items-center gap-4 mt-2 text-white/80">
+                              <span>{path.totalTime}</span>
+                              <span>•</span>
+                              <span>{path.difficulty}</span>
+                              <span>•</span>
+                              <span>{path.scenarios.length} simulaciones</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <p className="text-lg text-white/90 leading-relaxed">
+                          {path.description}
+                        </p>
+                        
+                        <div className="flex flex-wrap gap-2">
+                          {path.scenarios.map(scenarioId => {
+                            const scenario = scenarios.find(s => s.id === scenarioId);
+                            return scenario ? (
+                              <Badge key={scenarioId} className="bg-white/20 text-white border-white/30">
+                                {scenario.title}
+                              </Badge>
+                            ) : null;
+                          })}
+                        </div>
+                        
+                        <Button 
+                          onClick={() => {
+                            const firstScenario = scenarios.find(s => s.id === path.scenarios[0]);
+                            if (firstScenario) onStartSimulation(firstScenario);
+                          }}
+                          size="lg"
+                          className="bg-white text-gray-900 hover:bg-white/90 font-semibold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                        >
+                          <Play className="h-5 w-5 mr-2" />
+                          Comenzar Ruta de Aprendizaje
+                        </Button>
+                      </div>
+                      
+                      <div className="relative">
+                        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
+                          <h5 className="font-semibold mb-4 text-white">🎯 Lo que aprenderás:</h5>
+                          <ul className="space-y-2 text-white/90">
+                            {path.scenarios.map((scenarioId, idx) => {
+                              const scenario = scenarios.find(s => s.id === scenarioId);
+                              return scenario ? (
+                                <li key={idx} className="flex items-start gap-2">
+                                  <ChevronRight className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                  <span className="text-sm">{scenario.skills[0]}</span>
+                                </li>
+                              ) : null;
+                            })}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Complete Library */}
+        {activeSection === 'library' && (
+          <div className="space-y-8">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">📚 Catálogo del Módulo Role-Playing</h3>
+              <p className="text-gray-600">
+                {filteredScenarios.length === scenarios.length 
+                  ? `${scenarios.length} simulaciones ejecutivas disponibles en nuestro primer módulo`
+                  : `${filteredScenarios.length} de ${scenarios.length} simulaciones encontradas`
+                }
+              </p>
+              
+              {/* Module info */}
+              <div className="mt-4 inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                <span className="text-sm text-blue-800 font-medium">
+                  Módulo 1/4 • Más módulos de aprendizaje llegarán pronto
+                </span>
+              </div>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-8">
+              {filteredScenarios.map((scenario, index) => (
+                <div key={scenario.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 group">
+                  <div className="relative h-48 overflow-hidden">
+                    <ImageWithFallback
+                      src={scenario.image}
+                      alt={scenario.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    
+                    <div className="absolute top-4 left-4">
+                      <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30">
+                        {getCategoryIcon(scenario.category)}
+                        <span className="ml-1">{scenario.category}</span>
+                      </Badge>
+                    </div>
+                    
+                    <div className="absolute top-4 right-4 flex items-center gap-2">
+                      <div className="flex gap-1">
+                        {getDifficultyStars(scenario.difficulty)}
+                      </div>
+                      <Badge className={`text-xs ${
+                        scenario.difficulty === 'Principiante' ? 'bg-green-500/20 text-green-200 border-green-300' :
+                        scenario.difficulty === 'Intermedio' ? 'bg-yellow-500/20 text-yellow-200 border-yellow-300' :
+                        'bg-red-500/20 text-red-200 border-red-300'
+                      }`}>
+                        {scenario.difficulty}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6">
+                    <h4 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                      {scenario.title}
+                    </h4>
+                    <p className="text-gray-600 mb-4 line-clamp-2">
+                      {scenario.description}
+                    </p>
+                    
+                    <div className="flex items-center justify-between mb-4 text-sm text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {scenario.duration}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {scenario.participants.split(',').length} stakeholders
+                      </span>
+                    </div>
+                    
+                    <div className="mb-4">
+                      <p className="text-xs font-medium text-gray-700 mb-2">Competencias clave:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {scenario.skills.slice(0, 2).map((skill) => (
+                          <Badge key={skill} variant="outline" className="text-xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                        {scenario.skills.length > 2 && (
+                          <Badge variant="outline" className="text-xs text-gray-500">
+                            +{scenario.skills.length - 2} más
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <Button 
+                      onClick={() => onStartSimulation(scenario)}
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium rounded-lg"
+                    >
+                      Comenzar Simulación
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,294 @@
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { Header } from './components/Header';
+import { LandingPage } from './components/LandingPage';
+import { DashboardView } from './components/DashboardView';
+import { SimulationView as SimulationViewFixed } from './components/SimulationViewFixed';
+import { FeedbackView } from './components/FeedbackView';
+import { ProgressView } from './components/ProgressView';
+import { CreatorView } from './components/CreatorView';
+import { apiService } from './services/api';
+
+interface Scenario {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  difficulty: string;
+  duration: string;
+  participants: string;
+  objectives: string[];
+  skills: string[];
+  image_url: string;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+  image: string;
+}
+
+interface Simulation {
+  id: number;
+  scenario: number;
+  custom_simulation: number | null;
+  status: string;
+  started_at: string;
+}
+
+interface UserData {
+  id: number;
+  name: string;
+}
+
+interface CustomSimulation {
+  id: number;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: string;
+  skills: string[];
+  user_role: string;
+  ai_role: string;
+  ai_personality: Record<string, number>;
+  ai_objectives: string[];
+  user_objectives: string[];
+  end_conditions: string[];
+  knowledge_base: string;
+  is_published: boolean;
+  createdAt: Date;
+}
+
+type AppState = 'landing' | 'dashboard' | 'simulation' | 'feedback' | 'progress' | 'creator';
+
+export default function AppRouter() {
+  const [user, setUser] = useState<UserData | null>(null);
+  const [currentView, setCurrentView] = useState<AppState>('landing');
+  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+  const [simulationData, setSimulationData] = useState<{ messages: any[]; duration: number } | null>(null);
+  const [customSimulations, setCustomSimulations] = useState<CustomSimulation[]>([]);
+  const navigate = useNavigate();
+
+  // Check for existing session on app load
+  useEffect(() => {
+    const savedUser = localStorage.getItem('userData') || localStorage.getItem('oasis-user') || localStorage.getItem('user');
+    const authToken = localStorage.getItem('authToken') || localStorage.getItem('access_token');
+    
+    if (savedUser && authToken) {
+      try {
+        const userData = JSON.parse(savedUser);
+        setUser(userData);
+        setCurrentView('dashboard');
+        // Ensure API service has the token
+        apiService.setToken(authToken);
+      } catch (error) {
+        // Clear invalid session data
+        localStorage.removeItem('oasis-user');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('user');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('access_token');
+      }
+    }
+  }, []);
+
+  const handleLogin = (userData: UserData) => {
+    setUser(userData);
+    setCurrentView('dashboard');
+    navigate('/dashboard');
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setCurrentView('landing');
+    setSelectedScenario(null);
+    setSimulationData(null);
+    setCustomSimulations([]);
+    localStorage.removeItem('oasis-user');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('user');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refreshToken');
+    navigate('/');
+  };
+
+  const handleStartSimulation = (scenario: Scenario) => {
+    setSelectedScenario(scenario);
+    setCurrentView('simulation');
+    navigate(`/simulation/${scenario.id}`);
+  };
+
+  const handleEndSimulation = (messages: any[], duration: number) => {
+    setSimulationData({ messages, duration });
+    setCurrentView('feedback');
+    navigate(`/feedback/${selectedScenario?.id}`);
+  };
+
+  const handleBackToDashboard = () => {
+    setCurrentView('dashboard');
+    setSelectedScenario(null);
+    setSimulationData(null);
+    navigate('/dashboard');
+  };
+
+  const handleViewProgress = () => {
+    setCurrentView('progress');
+    navigate('/progress');
+  };
+
+  const handleViewCreator = () => {
+    setCurrentView('creator');
+    navigate('/creator');
+  };
+
+  const handleSimulationCreated = (simulation: CustomSimulation) => {
+    setCustomSimulations(prev => [...prev, simulation]);
+    setCurrentView('dashboard');
+    navigate('/dashboard');
+  };
+
+  const handleRestartSimulation = () => {
+    if (selectedScenario) {
+      setCurrentView('simulation');
+      navigate(`/simulation/${selectedScenario.id}`);
+    }
+  };
+
+  // If user is not logged in, show landing page
+  if (!user) {
+    return <LandingPage onLogin={handleLogin} />;
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={
+        <div>
+          <Header user={user} onLogout={handleLogout} currentView="dashboard" />
+          <DashboardView 
+            onStartSimulation={handleStartSimulation}
+            onViewProgress={handleViewProgress}
+            onViewCreator={handleViewCreator}
+            customSimulations={customSimulations}
+          />
+        </div>
+      } />
+      
+      <Route path="/dashboard" element={
+        <div>
+          <Header user={user} onLogout={handleLogout} currentView="dashboard" />
+          <DashboardView 
+            onStartSimulation={handleStartSimulation}
+            onViewProgress={handleViewProgress}
+            onViewCreator={handleViewCreator}
+            customSimulations={customSimulations}
+          />
+        </div>
+      } />
+      
+      <Route path="/simulation/:scenarioId" element={<SimulationRoute />} />
+      <Route path="/feedback/:scenarioId" element={<FeedbackRoute />} />
+      <Route path="/progress" element={<ProgressRoute />} />
+      <Route path="/creator" element={<CreatorRoute />} />
+    </Routes>
+  );
+
+  // Route components
+  function SimulationRoute() {
+    const { scenarioId } = useParams<{ scenarioId: string }>();
+    
+    useEffect(() => {
+      // Load scenario data based on scenarioId
+      const loadScenario = async () => {
+        try {
+          const scenarios = await apiService.getScenarios();
+          const scenario = scenarios.find(s => s.id === scenarioId);
+          if (scenario) {
+            setSelectedScenario(scenario);
+          }
+        } catch (error) {
+          console.error('Error loading scenario:', error);
+          navigate('/dashboard');
+        }
+      };
+      
+      loadScenario();
+    }, [scenarioId, navigate]);
+
+    if (!selectedScenario) {
+      return <div>Loading...</div>;
+    }
+
+    return (
+      <div>
+        <Header user={user!} onLogout={handleLogout} currentView="simulation" />
+        <SimulationViewFixed
+          scenario={selectedScenario}
+          onEndSimulation={handleEndSimulation}
+          onBackToDashboard={handleBackToDashboard}
+        />
+      </div>
+    );
+  }
+
+  function FeedbackRoute() {
+    const { scenarioId } = useParams<{ scenarioId: string }>();
+    
+    useEffect(() => {
+      // Load scenario data based on scenarioId
+      const loadScenario = async () => {
+        try {
+          const scenarios = await apiService.getScenarios();
+          const scenario = scenarios.find(s => s.id === scenarioId);
+          if (scenario) {
+            setSelectedScenario(scenario);
+          }
+        } catch (error) {
+          console.error('Error loading scenario:', error);
+          navigate('/dashboard');
+        }
+      };
+      
+      loadScenario();
+    }, [scenarioId, navigate]);
+
+    if (!selectedScenario || !simulationData) {
+      return <div>Loading...</div>;
+    }
+
+    return (
+      <div>
+        <Header user={user!} onLogout={handleLogout} currentView="feedback" />
+        <FeedbackView
+          messages={simulationData.messages}
+          duration={simulationData.duration}
+          scenarioTitle={selectedScenario.title}
+          onBackToDashboard={handleBackToDashboard}
+          onRestartSimulation={handleRestartSimulation}
+        />
+      </div>
+    );
+  }
+
+  function ProgressRoute() {
+    return (
+      <div>
+        <Header user={user!} onLogout={handleLogout} currentView="progress" />
+        <ProgressView
+          onBackToDashboard={handleBackToDashboard}
+          onStartScenario={handleStartSimulation}
+        />
+      </div>
+    );
+  }
+
+  function CreatorRoute() {
+    return (
+      <div>
+        <Header user={user!} onLogout={handleLogout} currentView="creator" />
+        <CreatorView
+          onBackToDashboard={handleBackToDashboard}
+          onSimulationCreated={handleSimulationCreated}
+        />
+      </div>
+    );
+  }
+}

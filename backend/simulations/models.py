@@ -8,7 +8,6 @@ class Simulation(models.Model):
         ('completed', 'Completed'),
         ('abandoned', 'Abandoned'),
     ]
-    
     user = models.ForeignKey('authentication.User', on_delete=models.CASCADE, related_name='simulations')
     scenario = models.ForeignKey('scenarios.Scenario', on_delete=models.CASCADE, null=True, blank=True)
     custom_simulation = models.ForeignKey('scenarios.CustomSimulation', on_delete=models.CASCADE, null=True, blank=True)
@@ -27,7 +26,6 @@ class Message(models.Model):
         ('user', 'User'),
         ('ai', 'AI'),
     ]
-    
     simulation = models.ForeignKey(Simulation, on_delete=models.CASCADE, related_name='messages')
     sender = models.CharField(max_length=10, choices=SENDER_CHOICES)
     content = models.TextField()

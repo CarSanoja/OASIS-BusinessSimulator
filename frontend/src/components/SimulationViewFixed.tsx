@@ -50,11 +50,12 @@ interface Scenario {
 
 interface SimulationViewProps {
   scenario: Scenario;
+  simulation?: Simulation | null;
   onEndSimulation: (messages: Message[], duration: number) => void;
   onBackToDashboard: () => void;
 }
 
-export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }: SimulationViewProps) {
+export function SimulationView({ scenario, simulation: propSimulation, onEndSimulation, onBackToDashboard }: SimulationViewProps) {
   console.log('SimulationView rendering with scenario:', scenario);
   
   const [messages, setMessages] = useState<Message[]>([]);
@@ -86,18 +87,30 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   // Initialize simulation and load messages
   useEffect(() => {
     console.log('SimulationView useEffect - initializing simulation');
+    console.log('Prop simulation:', propSimulation);
+    console.log('Local simulation state:', simulation);
+    
     const initializeSimulation = async () => {
       try {
         setLoading(true);
-        console.log('Creating simulation for scenario:', scenario.id);
-        const newSimulation = await apiService.createSimulation({
-          scenario: parseInt(scenario.id)
-        });
-        console.log('Simulation created:', newSimulation);
-        setSimulation(newSimulation);
+        
+        // Use prop simulation if available, otherwise create new one
+        let simToUse = propSimulation;
+        
+        if (!simToUse) {
+          console.log('Creating new simulation for scenario:', scenario.id);
+          simToUse = await apiService.createSimulation({
+            scenario: parseInt(scenario.id)
+          });
+          console.log('Simulation created:', simToUse);
+        } else {
+          console.log('Using existing simulation:', simToUse);
+        }
+        
+        setSimulation(simToUse);
         
         // Load existing messages
-        await loadMessages(newSimulation.id, 1);
+        await loadMessages(simToUse.id, 1);
         
         setLoading(false);
       } catch (err) {
@@ -111,7 +124,7 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
     if (!simulation) {
       initializeSimulation();
     }
-  }, [scenario.id, simulation]);
+  }, [scenario.id, propSimulation]); // Include propSimulation in dependencies
 
   // Load messages function
   const loadMessages = async (simulationId: number, page: number) => {

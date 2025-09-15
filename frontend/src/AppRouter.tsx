@@ -65,6 +65,8 @@ export default function AppRouter() {
   const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
   const [simulationData, setSimulationData] = useState<{ messages: any[]; duration: number } | null>(null);
   const [customSimulations, setCustomSimulations] = useState<CustomSimulation[]>([]);
+  const [activeSimulation, setActiveSimulation] = useState<Simulation | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Check for existing session on app load
@@ -111,11 +113,24 @@ export default function AppRouter() {
     navigate('/');
   };
 
-  const handleStartSimulation = (scenario: Scenario) => {
+  const handleStartSimulation = async (scenario: Scenario) => {
     console.log('Starting simulation for scenario:', scenario);
     setSelectedScenario(scenario);
     setCurrentView('simulation');
-    navigate(`/simulation/${scenario.id}`);
+    
+    try {
+      // Create simulation in the router
+      const newSimulation = await apiService.createSimulation({
+        scenario: parseInt(scenario.id)
+      });
+      console.log('Simulation created in router:', newSimulation);
+      setActiveSimulation(newSimulation);
+      
+      navigate(`/simulation/${scenario.id}`);
+    } catch (err) {
+      console.error('Error creating simulation:', err);
+      setError(err instanceof Error ? err.message : 'Error creating simulation');
+    }
   };
 
   const handleEndSimulation = (messages: any[], duration: number) => {
@@ -240,6 +255,7 @@ export default function AppRouter() {
         <Header user={user!} onLogout={handleLogout} currentView="simulation" />
         <SimulationViewFixed
           scenario={selectedScenario}
+          simulation={activeSimulation}
           onEndSimulation={handleEndSimulation}
           onBackToDashboard={handleBackToDashboard}
         />

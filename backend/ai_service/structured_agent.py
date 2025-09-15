@@ -445,29 +445,82 @@ class StructuredSimulationAgent:
         
         response_content = ""
         
-        if insight_type == 'key_points':
-            key_points = relevant_data.get('relevant_key_points', [])
-            if key_points:
-                response_content = f"Basándome en nuestra conversación, los puntos clave que hemos discutido incluyen: {', '.join(key_points[:3])}. "
-            else:
-                response_content = "Hasta ahora hemos cubierto varios temas importantes en nuestra conversación. "
-        
-        elif insight_type == 'financial':
+        # Always try to get data from semantic search
+        if insight_type == 'financial':
             financial_data = relevant_data.get('relevant_financial_data', [])
             if financial_data:
                 response_content = f"Respecto a los aspectos financieros, hemos mencionado: {', '.join(financial_data)}. "
             else:
-                response_content = "En términos financieros, "
+                response_content = "En términos financieros, hemos tocado varios aspectos importantes. "
+        
+        elif insight_type == 'key_points':
+            key_points = relevant_data.get('relevant_key_points', [])
+            if key_points:
+                response_content = f"Basándome en nuestra conversación, los puntos clave que hemos discutido incluyen: {', '.join(key_points[:3])}. "
+            else:
+                # Fallback - try to get ANY data from context
+                all_data = []
+                all_data.extend(relevant_data.get('relevant_financial_data', []))
+                all_data.extend(relevant_data.get('relevant_stakeholders', []))
+                all_data.extend(relevant_data.get('relevant_actions', []))
+                if all_data:
+                    response_content = f"Los key findings de nuestra conversación incluyen: {', '.join(all_data[:4])}. "
+                else:
+                    response_content = "Hasta ahora hemos cubierto varios temas importantes en nuestra conversación. "
         
         elif insight_type == 'strategic':
             strategic_concepts = relevant_data.get('relevant_key_points', [])
             if strategic_concepts:
                 response_content = f"Estratégicamente, hemos discutido: {', '.join(strategic_concepts[:3])}. "
+            else:
+                # Try to get strategic data from other sources
+                all_strategic = []
+                all_strategic.extend(relevant_data.get('relevant_actions', []))
+                all_strategic.extend(relevant_data.get('relevant_concerns', []))
+                if all_strategic:
+                    response_content = f"Los puntos estratégicos incluyen: {', '.join(all_strategic[:3])}. "
+                else:
+                    response_content = "Desde una perspectiva estratégica, "
         
         elif insight_type == 'stakeholders':
             stakeholders = relevant_data.get('relevant_stakeholders', [])
             if stakeholders:
                 response_content = f"Considerando los stakeholders que hemos mencionado ({', '.join(stakeholders)}), "
+            else:
+                response_content = "En cuanto a los stakeholders involucrados, "
+        
+        elif insight_type == 'actions':
+            actions = relevant_data.get('relevant_actions', [])
+            if actions:
+                response_content = f"Las acciones que hemos identificado incluyen: {', '.join(actions[:3])}. "
+            else:
+                response_content = "En términos de acciones concretas, "
+        
+        elif insight_type == 'general':
+            # Generic insight response - combine all available data
+            all_insights = []
+            all_insights.extend(relevant_data.get('relevant_financial_data', []))
+            all_insights.extend(relevant_data.get('relevant_key_points', []))
+            all_insights.extend(relevant_data.get('relevant_stakeholders', []))
+            all_insights.extend(relevant_data.get('relevant_actions', []))
+            
+            if all_insights:
+                response_content = f"Revisando nuestra conversación anterior, hemos cubierto: {', '.join(all_insights[:4])}. "
+            else:
+                response_content = "En nuestra conversación previa hemos tocado varios temas importantes. "
+        
+        else:
+            # Default insight response - combine all available data
+            all_insights = []
+            all_insights.extend(relevant_data.get('relevant_financial_data', []))
+            all_insights.extend(relevant_data.get('relevant_key_points', []))
+            all_insights.extend(relevant_data.get('relevant_stakeholders', []))
+            all_insights.extend(relevant_data.get('relevant_actions', []))
+            
+            if all_insights:
+                response_content = f"Basándome en nuestra conversación previa, hemos cubierto: {', '.join(all_insights[:4])}. "
+            else:
+                response_content = "Revisando nuestra conversación anterior, "
         
         # Add contextual continuation
         if context.get('business_impact_level') == 'critical':
@@ -475,11 +528,18 @@ class StructuredSimulationAgent:
         else:
             response_content += "¿Hay algún aspecto específico que quieras profundizar?"
         
+        # Collect all relevant points for key_points field
+        all_key_points = []
+        all_key_points.extend(relevant_data.get('relevant_key_points', []))
+        all_key_points.extend(relevant_data.get('relevant_financial_data', []))
+        all_key_points.extend(relevant_data.get('relevant_stakeholders', []))
+        all_key_points.extend(relevant_data.get('relevant_actions', []))
+        
         return {
             "response": response_content,
             "emotion": "neutral",
             "confidence_level": 9,  # High confidence when referencing previous data
-            "key_points": relevant_data.get('relevant_key_points', [])[:3],
+            "key_points": all_key_points[:5],  # Return up to 5 key points
             "business_impact": context.get('business_impact_level', 'medium'),
             "suggested_follow_up": "¿Quieres que revisemos algún punto específico?",
             "objective_progress": {},

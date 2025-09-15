@@ -196,30 +196,49 @@ class ConversationMemoryService:
         try:
             insights = simulation.insights
             
-            # Search in key points
+            # Enhanced search logic
+            financial_keywords = ['financiero', 'dinero', 'presupuesto', 'inversión', 'serie', 'usuarios', 'crecimiento']
+            strategic_keywords = ['estrategia', 'plan', 'estratégico', 'expansión', 'roadmap']
+            stakeholder_keywords = ['equipo', 'CEO', 'personas', 'stakeholder', 'google']
+            summary_keywords = ['key findings', 'resumen', 'resumir', 'conclusiones', 'puntos clave', 'aspectos', 'temas']
+            
+            # If it's a summary/key findings request, return ALL available data
+            if any(keyword in query_lower for keyword in summary_keywords):
+                results['relevant_key_points'] = insights.all_key_points
+                results['relevant_financial_data'] = insights.all_financial_mentions
+                results['relevant_stakeholders'] = insights.all_stakeholders
+                results['relevant_actions'] = insights.all_action_items
+                results['relevant_concerns'] = insights.all_concerns
+            else:
+                # Search financial data
+                if any(keyword in query_lower for keyword in financial_keywords):
+                    results['relevant_financial_data'] = insights.all_financial_mentions
+                
+                # Search strategic concepts  
+                if any(keyword in query_lower for keyword in strategic_keywords):
+                    results['relevant_key_points'] = insights.all_strategic_concepts
+                
+                # Search stakeholders
+                if any(keyword in query_lower for keyword in stakeholder_keywords):
+                    results['relevant_stakeholders'] = insights.all_stakeholders
+            
+            # General search in all data
             for point in insights.all_key_points:
                 if any(word in point.lower() for word in query_lower.split()):
                     results['relevant_key_points'].append(point)
             
-            # Search in financial mentions
             for financial in insights.all_financial_mentions:
                 if any(word in financial.lower() for word in query_lower.split()):
                     results['relevant_financial_data'].append(financial)
             
-            # Search in stakeholders
             for stakeholder in insights.all_stakeholders:
                 if any(word in stakeholder.lower() for word in query_lower.split()):
                     results['relevant_stakeholders'].append(stakeholder)
             
-            # Search in action items
-            for action in insights.all_action_items:
-                if any(word in action.lower() for word in query_lower.split()):
-                    results['relevant_actions'].append(action)
-            
-            # Search in concerns
-            for concern in insights.all_concerns:
-                if any(word in concern.lower() for word in query_lower.split()):
-                    results['relevant_concerns'].append(concern)
+            # Remove duplicates
+            results['relevant_key_points'] = list(set(results['relevant_key_points']))
+            results['relevant_financial_data'] = list(set(results['relevant_financial_data']))
+            results['relevant_stakeholders'] = list(set(results['relevant_stakeholders']))
             
             # Add context summary
             results['context_summary'] = insights.conversation_summary
@@ -237,27 +256,74 @@ class ConversationMemoryService:
         
         # Check what type of insight question this is
         insight_type = None
-        if any(word in question_lower for word in ['key findings', 'puntos clave', 'conclusiones']):
-            insight_type = 'key_points'
-        elif any(word in question_lower for word in ['financiero', 'dinero', 'presupuesto', 'costo']):
+        
+        # Financial keywords (check first for specificity)
+        if any(word in question_lower for word in ['financiero', 'financieras', 'dinero', 'presupuesto', 'costo', 'precio', 'valor', 'inversion', 
+                                                  'serie a', 'funding', 'revenue', 'arr', '$', 'millones', 'k', 'ingresos', 'cifras',
+                                                  'numeros', 'metricas', 'economico', 'economicos', 'monetario']):
             insight_type = 'financial'
-        elif any(word in question_lower for word in ['estrategia', 'plan', 'enfoque']):
+        
+        # Key findings/summary keywords (broader detection)
+        elif any(word in question_lower for word in ['key findings', 'puntos clave', 'conclusiones', 'resumen', 
+                                                    'resumir']):
+            insight_type = 'key_points'
+        
+        # General conversation questions (broader detection)
+        elif any(word in question_lower for word in ['discutido', 'hablado', 'conversacion', 'mencionado',
+                                                    'aspectos', 'temas', 'cubierto', 'tratado']):
+            insight_type = 'key_points'
+        
+        # Strategic keywords
+        elif any(word in question_lower for word in ['estrategia', 'estrategico', 'plan', 'enfoque', 'vision', 
+                                                    'mision', 'objetivos', 'metas', 'direccion']):
             insight_type = 'strategic'
-        elif any(word in question_lower for word in ['equipo', 'personas', 'stakeholder']):
+        
+        # Stakeholder keywords  
+        elif any(word in question_lower for word in ['equipo', 'personas', 'stakeholder', 'cliente', 'usuario', 
+                                                    'inversor', 'socio', 'partner', 'ceo', 'team']):
             insight_type = 'stakeholders'
-        elif any(word in question_lower for word in ['acciones', 'pasos', 'implementar']):
+        
+        # Action keywords
+        elif any(word in question_lower for word in ['acciones', 'pasos', 'implementar', 'hacer', 'ejecutar', 
+                                                    'realizar', 'siguiente', 'proximos', 'plan de accion']):
             insight_type = 'actions'
-        elif any(word in question_lower for word in ['problemas', 'preocupaciones', 'riesgos']):
+        
+        # Concern keywords
+        elif any(word in question_lower for word in ['problemas', 'preocupaciones', 'riesgos', 'desafios', 
+                                                    'dificultades', 'obstaculos', 'concerns', 'issues']):
             insight_type = 'concerns'
         
+        # Catch-all for questions about previous conversation
+        elif any(word in question_lower for word in ['anterior', 'anteriormente', 'antes', 'previo', 'pasado',
+                                                    'discutimos', 'hablamos', 'mencionamos', 'dijimos']):
+            insight_type = 'general'
+        
         if insight_type:
-            # Get relevant insights
-            search_results = self.semantic_search_insights(simulation, user_question)
+            # Get relevant insights - simplified to avoid recursion
+            try:
+                insights = simulation.insights
+                relevant_data = {
+                    'relevant_key_points': insights.all_key_points[:5],
+                    'relevant_financial_data': insights.all_financial_mentions[:5],
+                    'relevant_stakeholders': insights.all_stakeholders[:5],
+                    'relevant_actions': insights.all_action_items[:5],
+                    'relevant_concerns': insights.all_concerns[:5],
+                    'context_summary': insights.conversation_summary
+                }
+            except:
+                relevant_data = {
+                    'relevant_key_points': [],
+                    'relevant_financial_data': [],
+                    'relevant_stakeholders': [],
+                    'relevant_actions': [],
+                    'relevant_concerns': [],
+                    'context_summary': 'No insights available'
+                }
             
             return {
                 'can_answer': True,
                 'insight_type': insight_type,
-                'relevant_data': search_results,
+                'relevant_data': relevant_data,
                 'suggested_response_approach': f"Referirse a insights previos sobre {insight_type}"
             }
         

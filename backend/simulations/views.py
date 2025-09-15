@@ -29,6 +29,11 @@ class SimulationViewSet(viewsets.ModelViewSet):
             return SimulationCreateSerializer
         return SimulationSerializer
     
+    def create(self, request, *args, **kwargs):
+        print(f"🔍 DEBUG: Received data: {request.data}")
+        print(f"🔍 DEBUG: Data type: {type(request.data)}")
+        return super().create(request, *args, **kwargs)
+    
     @action(detail=True, methods=['post'])
     def send_message(self, request, pk=None):
         """Send a message in the simulation and get AI response"""

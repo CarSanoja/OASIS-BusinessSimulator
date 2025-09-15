@@ -113,6 +113,11 @@ class ApiService {
       headers.Authorization = `Bearer ${this.token}`;
     }
 
+    console.log('🔍 DEBUG: Making request to:', url);
+    console.log('🔍 DEBUG: Request options:', options);
+    console.log('🔍 DEBUG: Request headers:', headers);
+    console.log('🔍 DEBUG: Current token:', this.token ? 'Present' : 'Missing');
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -255,6 +260,8 @@ class ApiService {
 
   // Simulations
   async createSimulation(data: { scenario?: number; custom_simulation?: number }): Promise<Simulation> {
+    console.log('🔍 DEBUG: createSimulation called with data:', data);
+    console.log('🔍 DEBUG: JSON.stringify(data):', JSON.stringify(data));
     return this.request<Simulation>('/simulations/simulations/', {
       method: 'POST',
       body: JSON.stringify(data),

@@ -400,18 +400,22 @@ class StructuredSimulationAgent:
                 ai_personality=state.ai_personality
             )
             
-            # Generate structured response based on LLM analysis
-            structured_response = self.ai_service.generate_structured_response(state)
+            # Generate contextual response based on LLM analysis instead of templates
+            contextual_response = self._generate_contextual_response(
+                last_user_message, 
+                llm_analysis, 
+                state
+            )
             
             # Enhance response with conversation context
             if conversation_context:
-                structured_response = self._enhance_with_conversation_context(
-                    structured_response, conversation_context, llm_analysis
+                contextual_response = self._enhance_with_conversation_context(
+                    contextual_response, conversation_context, llm_analysis
                 )
             
             # Use LLM analysis to enhance the response
             enhanced_response = self._enhance_response_with_llm_analysis(
-                structured_response, 
+                contextual_response, 
                 llm_analysis
             )
             
@@ -436,6 +440,79 @@ class StructuredSimulationAgent:
         except Exception as e:
             print(f"LLM processing error: {e}")
             return self._fallback_response()
+    
+    def _generate_contextual_response(self, user_message: str, llm_analysis: ComprehensiveMessageAnalysis, state: SimulationState) -> AIResponse:
+        """Generate contextual response based on user message content and LLM analysis"""
+        
+        # Detect what the user is asking about
+        user_message_lower = user_message.lower()
+        
+        # Scenario-specific contextual responses
+        scenario_type = self.ai_service._detect_scenario_type(state.scenario_context)
+        
+        # Generate response based on user intent and content
+        if any(word in user_message_lower for word in ['pitch', 'deck', 'presentación', 'propuesta']):
+            if scenario_type == 'startup-pitch':
+                response_content = "Perfecto, hablemos del pitch deck. He revisado su presentación y veo algunos puntos interesantes. ¿Podría profundizar en la sección de tracción? Específicamente, me interesa entender mejor las métricas de retención y el LTV/CAC ratio."
+            else:
+                response_content = "Entiendo que quiere discutir la presentación. ¿Podría elaborar más sobre los puntos clave que considera más importantes para esta propuesta?"
+        
+        elif any(word in user_message_lower for word in ['financiero', 'dinero', 'precio', 'valor', 'costo', 'presupuesto']):
+            response_content = "Excelente, hablemos de los aspectos financieros. ¿Podría proporcionar más detalles sobre la estructura de costos y los supuestos detrás de sus proyecciones?"
+        
+        elif any(word in user_message_lower for word in ['estrategia', 'plan', 'objetivo', 'meta']):
+            response_content = "Me interesa conocer su estrategia. ¿Podría explicar cómo planea ejecutar este plan y cuáles son los hitos clave que considera críticos?"
+        
+        elif any(word in user_message_lower for word in ['riesgo', 'problema', 'desafío', 'preocupación']):
+            response_content = "Es importante abordar los riesgos. ¿Cuáles son los principales desafíos que anticipa y cómo planea mitigarlos?"
+        
+        elif any(word in user_message_lower for word in ['timeline', 'tiempo', 'cronograma', 'fecha', 'cuándo']):
+            response_content = "Entiendo la importancia del timing. ¿Podría detallar el cronograma que tiene en mente y los hitos específicos?"
+        
+        elif any(word in user_message_lower for word in ['equipo', 'gente', 'talento', 'recursos humanos']):
+            response_content = "El equipo es crucial para el éxito. ¿Podría contarme más sobre la estructura organizacional y los roles clave?"
+        
+        elif any(word in user_message_lower for word in ['mercado', 'competencia', 'competidor', 'industria']):
+            response_content = "El análisis de mercado es fundamental. ¿Cómo se posiciona frente a la competencia y cuáles son sus ventajas competitivas?"
+        
+        elif any(word in user_message_lower for word in ['cliente', 'usuario', 'demanda', 'ventas']):
+            response_content = "Entiendo que quiere discutir el lado comercial. ¿Podría compartir más sobre su modelo de adquisición de clientes y las métricas de conversión?"
+        
+        else:
+            # Default contextual response based on scenario
+            if scenario_type == 'startup-pitch':
+                response_content = "Interesante punto. Como inversionista, me gustaría entender mejor cómo esto se alinea con su modelo de negocio y proyecciones de crecimiento."
+            elif scenario_type == 'merger-negotiation':
+                response_content = "Entiendo su perspectiva. Desde el lado de la empresa objetivo, necesito evaluar cómo esto impacta nuestros stakeholders y operaciones actuales."
+            elif scenario_type == 'crisis-leadership':
+                response_content = "Comprendo la situación. Como líder, necesitamos evaluar las implicaciones y desarrollar un plan de acción inmediato."
+            else:
+                response_content = "Entiendo su punto de vista. ¿Podría elaborar más sobre los aspectos específicos que considera más importantes?"
+        
+        # Determine emotion based on LLM analysis
+        emotion = "neutral"
+        if llm_analysis.business_impact.impact_level == "critical":
+            emotion = "concerned"
+        elif llm_analysis.emotion_analysis.primary_emotion in ["positive", "confident"]:
+            emotion = "encouraging"
+        elif llm_analysis.emotion_analysis.primary_emotion in ["negative", "frustrated"]:
+            emotion = "skeptical"
+        
+        # Generate key points from LLM analysis
+        key_points = []
+        if llm_analysis.key_points.main_topics:
+            key_points.extend(llm_analysis.key_points.main_topics[:3])
+        if llm_analysis.key_points.financial_mentions:
+            key_points.extend(llm_analysis.key_points.financial_mentions[:2])
+        
+        return AIResponse(
+            content=response_content,
+            emotion=emotion,
+            confidence_level=8,
+            key_points=key_points[:5],
+            business_impact=llm_analysis.business_impact.impact_level,
+            suggested_follow_up="¿Podría proporcionar más detalles sobre este aspecto?"
+        )
     
     def _generate_insight_based_response(self, user_question: str, insight_check: Dict, context: Dict, state: SimulationState) -> Dict[str, Any]:
         """Generate response based on previous conversation insights"""

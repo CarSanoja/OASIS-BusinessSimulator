@@ -2,6 +2,7 @@ import os
 from typing import Dict, List, Any, Optional, Literal
 from pydantic import BaseModel, Field
 from dataclasses import dataclass
+from .llm_analyzer import llm_analyzer, ComprehensiveMessageAnalysis
 
 
 class AIResponse(BaseModel):
@@ -357,46 +358,123 @@ class StructuredSimulationAgent:
         self.ai_service = StructuredAIService()
     
     def process_message(self, state: SimulationState) -> Dict[str, Any]:
-        """Process a message and return structured AI response"""
+        """Process a message using LLM analysis and return structured AI response"""
         try:
-            # Generate structured response
-            structured_response = self.ai_service.generate_structured_response(state)
-            
-            # Analyze objectives
+            # Get last user message
             last_user_message = ""
             for msg in reversed(state.messages):
                 if msg.startswith('User:'):
                     last_user_message = msg[5:]
                     break
             
+            if not last_user_message:
+                return self._fallback_response()
+            
+            # Use LLM for comprehensive analysis
+            llm_analysis = llm_analyzer.analyze_message_comprehensive(
+                user_message=last_user_message,
+                conversation_history=state.messages,
+                scenario_context=state.scenario_context,
+                user_objectives=state.user_objectives,
+                end_conditions=[],  # Will be implemented
+                ai_personality=state.ai_personality
+            )
+            
+            # Generate structured response based on LLM analysis
+            structured_response = self.ai_service.generate_structured_response(state)
+            
+            # Use LLM analysis to enhance the response
+            enhanced_response = self._enhance_response_with_llm_analysis(
+                structured_response, 
+                llm_analysis
+            )
+            
+            # Convert objective progress from LLM analysis
             objective_progress = {}
-            if last_user_message:
-                progress_list = self.ai_service.analyze_objectives(state, last_user_message)
-                for progress in progress_list:
-                    if progress.is_completed and len(state.user_objectives) > int(progress.objective_id.split('_')[1]):
-                        objective_key = state.user_objectives[int(progress.objective_id.split('_')[1])]
-                        objective_progress[objective_key] = True
+            for obj_progress in llm_analysis.objective_progress:
+                if obj_progress.is_fully_completed:
+                    objective_progress[obj_progress.objective_text] = True
             
             return {
-                "response": structured_response.content,
-                "emotion": structured_response.emotion,
-                "confidence_level": structured_response.confidence_level,
-                "key_points": structured_response.key_points,
-                "business_impact": structured_response.business_impact,
-                "suggested_follow_up": structured_response.suggested_follow_up,
-                "objective_progress": objective_progress
+                "response": enhanced_response.content,
+                "emotion": llm_analysis.emotion_analysis.primary_emotion,
+                "confidence_level": enhanced_response.confidence_level,
+                "key_points": llm_analysis.key_points.main_topics,
+                "business_impact": llm_analysis.business_impact.impact_level,
+                "suggested_follow_up": enhanced_response.suggested_follow_up,
+                "objective_progress": objective_progress,
+                "llm_analysis": {
+                    "financial_mentions": llm_analysis.key_points.financial_mentions,
+                    "strategic_concepts": llm_analysis.key_points.strategic_concepts,
+                    "stakeholders_mentioned": llm_analysis.key_points.stakeholders_mentioned,
+                    "action_items": llm_analysis.key_points.action_items,
+                    "concerns_raised": llm_analysis.key_points.concerns_raised,
+                    "risk_factors": llm_analysis.business_impact.risk_factors,
+                    "opportunities": llm_analysis.business_impact.opportunities,
+                    "urgency_level": llm_analysis.business_impact.urgency_level,
+                    "conversation_summary": llm_analysis.conversation_summary
+                }
             }
             
         except Exception as e:
-            # Fallback response
-            return {
-                "response": "Disculpe, podría repetir su propuesta? Me gustaría entender mejor su perspectiva.",
-                "emotion": "neutral",
-                "confidence_level": 5,
-                "key_points": ["clarificación", "comprensión"],
-                "business_impact": "medium",
-                "objective_progress": {}
+            print(f"LLM processing error: {e}")
+            # Fallback to simple analysis
+            return self._fallback_response()
+    
+    def _enhance_response_with_llm_analysis(self, base_response: AIResponse, llm_analysis: ComprehensiveMessageAnalysis) -> AIResponse:
+        """Enhance AI response based on LLM analysis"""
+        
+        # Adjust response based on detected urgency
+        if llm_analysis.business_impact.urgency_level == "immediate":
+            base_response.content = f"Entiendo la urgencia de la situación. {base_response.content}"
+        
+        # Adjust based on financial mentions
+        if llm_analysis.key_points.financial_mentions:
+            financial_context = ", ".join(llm_analysis.key_points.financial_mentions)
+            base_response.content += f" Respecto a los aspectos financieros que mencionas ({financial_context}), necesito más detalles."
+        
+        # Adjust based on concerns raised
+        if llm_analysis.key_points.concerns_raised:
+            base_response.content += " Veo que tienes algunas preocupaciones válidas que debemos abordar."
+        
+        # Update emotion based on LLM analysis
+        emotion_mapping = {
+            "positive": "encouraging",
+            "negative": "concerned", 
+            "frustrated": "concerned",
+            "confident": "neutral",
+            "hesitant": "encouraging",
+            "aggressive": "skeptical",
+            "collaborative": "encouraging"
+        }
+        
+        llm_emotion = llm_analysis.emotion_analysis.primary_emotion
+        if llm_emotion in emotion_mapping:
+            base_response.emotion = emotion_mapping[llm_emotion]
+        
+        return base_response
+    
+    def _fallback_response(self) -> Dict[str, Any]:
+        """Fallback response if LLM analysis fails"""
+        return {
+            "response": "Disculpe, podría repetir su propuesta? Me gustaría entender mejor su perspectiva.",
+            "emotion": "neutral",
+            "confidence_level": 5,
+            "key_points": ["clarificación", "comprensión"],
+            "business_impact": "medium",
+            "objective_progress": {},
+            "llm_analysis": {
+                "financial_mentions": [],
+                "strategic_concepts": [],
+                "stakeholders_mentioned": [],
+                "action_items": [],
+                "concerns_raised": [],
+                "risk_factors": [],
+                "opportunities": [],
+                "urgency_level": "medium",
+                "conversation_summary": "Análisis básico aplicado"
             }
+        }
     
     def generate_analysis(self, messages: List[str], duration_minutes: int) -> Dict[str, Any]:
         """Generate structured simulation analysis"""

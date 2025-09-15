@@ -352,24 +352,20 @@ interface CustomSimulation {
 ### 6. Key Integration Points
 
 #### AI Service Requirements (Current Implementation)
-**Status**: ✅ FULLY IMPLEMENTED with structured outputs using Langraph + Pydantic
+**Status**: ✅ FULLY IMPLEMENTED with LLM-based structured outputs using Langraph + Pydantic
 
-**Enhanced Implementation**:
-- **StructuredAIService**: Advanced response system with Pydantic models
-- **Structured Outputs**: All AI responses use Pydantic models with:
-  - content: Main response text
-  - emotion: Detected emotional tone (5 types)
-  - confidence_level: AI confidence (1-10 scale)
-  - key_points: Extracted key discussion points
-  - business_impact: Impact level (low/medium/high/critical)
-  - suggested_follow_up: Next recommended question
-- **Personality Integration**: Responses modified based on AI personality traits:
-  - Analytical (>70): Adds data/metrics requirements
-  - Aggressive (>70): Changes tone to more confrontational
-  - Impatient (<30): Adds urgency phrases
-  - Inflexible (<30): Adds firmness statements
-- **Enhanced Scenario Detection**: M&A, Crisis, Startup Pitch with contextual responses
-- **Advanced Objective Tracking**: Structured progress analysis with reasoning
+**Advanced LLM Implementation**:
+- **LLMAnalyzer**: Intelligent analysis replacing all keyword matching
+- **Comprehensive Analysis**: Each user message analyzed with LLM for:
+  - EmotionAnalysis: 8 emotion types with confidence scores
+  - KeyPointsExtraction: Financial mentions, strategic concepts, stakeholders, action items
+  - BusinessImpactAssessment: Impact level, urgency, risks, opportunities
+  - ObjectiveProgress: Completion percentage with evidence and reasoning
+  - EndConditionAnalysis: Condition detection with likelihood scoring
+- **Structured Outputs**: All responses use Pydantic models with full metadata
+- **Context Awareness**: LLM considers conversation history, scenario context, AI personality
+- **Intelligent Enhancement**: Responses modified based on LLM analysis results
+- **Fallback System**: Graceful degradation if LLM unavailable
 
 **Model Routing Logic**:
 ```python
@@ -385,15 +381,23 @@ def _detect_scenario_type(self, context: str) -> str:
         return 'default'
 ```
 
-**Structured Output Example**:
+**LLM Enhanced Structured Output Example**:
 ```json
 {
-  "content": "Buenos días. Aprecio su interés en nuestra empresa. Sin embargo, antes de discutir valoraciones, necesito entender su visión estratégica...",
-  "emotion": "neutral",
+  "content": "Buenos días. Aprecio su interés... Respecto a los aspectos financieros que mencionas ($14M, $500K), necesito más detalles.",
+  "emotion": "negative",
   "confidence_level": 8,
-  "key_points": ["visión estratégica", "cultura de innovación", "velocidad de desarrollo"],
-  "business_impact": "high", 
-  "suggested_follow_up": "¿Cuáles son los próximos pasos concretos que sugiere?"
+  "key_points": ["estrategia", "plan", "timeline"],
+  "business_impact": "critical",
+  "suggested_follow_up": "¿Cuáles son los próximos pasos concretos que sugiere?",
+  "llm_analysis": {
+    "financial_mentions": ["$14M", "$500K"],
+    "strategic_concepts": ["estrategia", "plan", "timeline"],
+    "stakeholders_mentioned": ["equipo técnico"],
+    "action_items": ["retener equipo", "establecer timeline"],
+    "urgency_level": "immediate",
+    "conversation_summary": "Usuario presenta propuesta financiera con urgencia"
+  }
 }
 ```
 

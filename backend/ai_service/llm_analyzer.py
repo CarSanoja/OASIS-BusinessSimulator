@@ -133,16 +133,15 @@ class LLMAnalyzer:
             # Get API key from environment
             api_key = os.getenv("OPENAI_API_KEY")
             
-            if not api_key or api_key.startswith("sk-proj-test"):
-                print("⚠️ Using test API key - switching to local structured analysis")
-                raise Exception("Test API key detected")
+            if not api_key:
+                print("⚠️ No API key found - switching to local structured analysis")
+                raise Exception("No API key provided")
             
             # Initialize real LLM with minimal parameters
             self.llm = ChatOpenAI(
                 model="gpt-4o-mini", 
                 temperature=0.3, 
-                api_key=api_key,
-                max_tokens=1000
+                api_key=api_key
             )
             self.llm_provider = "openai"
             print("✅ LLM Analyzer initialized with REAL OpenAI API + Structured Outputs")

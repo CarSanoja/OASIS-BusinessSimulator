@@ -112,6 +112,7 @@ export default function AppRouter() {
   };
 
   const handleStartSimulation = (scenario: Scenario) => {
+    console.log('Starting simulation for scenario:', scenario);
     setSelectedScenario(scenario);
     setCurrentView('simulation');
     navigate(`/simulation/${scenario.id}`);
@@ -195,26 +196,43 @@ export default function AppRouter() {
   function SimulationRoute() {
     const { scenarioId } = useParams<{ scenarioId: string }>();
     
+    console.log('SimulationRoute rendered with scenarioId:', scenarioId);
+    console.log('Current selectedScenario:', selectedScenario);
+    
     useEffect(() => {
-      // Load scenario data based on scenarioId
-      const loadScenario = async () => {
-        try {
-          const scenarios = await apiService.getScenarios();
-          const scenario = scenarios.find(s => s.id === scenarioId);
-          if (scenario) {
-            setSelectedScenario(scenario);
+      console.log('SimulationRoute useEffect triggered');
+      // If we don't have the selected scenario, load it
+      if (!selectedScenario || selectedScenario.id !== scenarioId) {
+        console.log('Loading scenario because:', { selectedScenario: !!selectedScenario, idMatch: selectedScenario?.id === scenarioId });
+        const loadScenario = async () => {
+          try {
+            const scenarios = await apiService.getScenarios();
+            const scenario = scenarios.find(s => s.id === scenarioId);
+            if (scenario) {
+              console.log('Found scenario:', scenario);
+              setSelectedScenario(scenario);
+            } else {
+              console.error('Scenario not found:', scenarioId);
+              navigate('/dashboard');
+            }
+          } catch (error) {
+            console.error('Error loading scenario:', error);
+            navigate('/dashboard');
           }
-        } catch (error) {
-          console.error('Error loading scenario:', error);
-          navigate('/dashboard');
-        }
-      };
-      
-      loadScenario();
-    }, [scenarioId, navigate]);
+        };
+        
+        loadScenario();
+      } else {
+        console.log('Scenario already loaded, skipping load');
+      }
+    }, [scenarioId, navigate, selectedScenario]);
 
     if (!selectedScenario) {
-      return <div>Loading...</div>;
+      return (
+        <div className="h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+          <div className="text-white text-lg">Cargando simulación...</div>
+        </div>
+      );
     }
 
     return (

@@ -107,8 +107,11 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
       }
     };
 
-    initializeSimulation();
-  }, [scenario.id]);
+    // Only initialize if we don't have a simulation yet
+    if (!simulation) {
+      initializeSimulation();
+    }
+  }, [scenario.id, simulation]);
 
   // Load messages function
   const loadMessages = async (simulationId: number, page: number) => {

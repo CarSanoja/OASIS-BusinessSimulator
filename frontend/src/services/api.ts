@@ -379,6 +379,7 @@ class ApiService {
   async getUnreadCount(): Promise<{ unread_count: number }> {
     return this.request('/notifications/notifications/unread_count/');
   }
+
 }
 
 export const apiService = new ApiService();

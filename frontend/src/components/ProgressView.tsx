@@ -54,6 +54,7 @@ export function ProgressView({ onBackToDashboard, onStartScenario }: ProgressVie
   const [simulationHistory, setSimulationHistory] = useState<SimulationHistory[]>([]);
   const [progressOverTime, setProgressOverTime] = useState<any[]>([]);
   const [keyMetrics, setKeyMetrics] = useState<any>({});
+  const [learningPaths, setLearningPaths] = useState<LearningPath[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,6 +84,10 @@ export function ProgressView({ onBackToDashboard, onStartScenario }: ProgressVie
         const historyResponse = await apiService.getSimulationHistory();
         setSimulationHistory(historyResponse.history);
 
+        // Load learning paths
+        const learningPathsResponse = await apiService.getLearningPaths();
+        setLearningPaths(learningPathsResponse.learning_paths);
+
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load progress data');
@@ -95,34 +100,7 @@ export function ProgressView({ onBackToDashboard, onStartScenario }: ProgressVie
     loadProgressData();
   }, []);
 
-  // Data now loaded from API in useEffect
-
-  const learningPaths: LearningPath[] = [
-    {
-      id: 'crisis-leadership',
-      title: 'Maestría en Gestión de Crisis',
-      description: 'Fortalece tus habilidades para liderar en situaciones de alta presión y incertidumbre.',
-      priority: 'alta',
-      estimatedTime: '3-4 sesiones',
-      scenarios: ['crisis-leadership', 'team-performance', 'board-strategic-planning']
-    },
-    {
-      id: 'strategic-thinking',
-      title: 'Pensamiento Estratégico Avanzado',
-      description: 'Desarrolla tu capacidad de análisis y planificación estratégica a largo plazo.',
-      priority: 'media',
-      estimatedTime: '4-5 sesiones',
-      scenarios: ['international-expansion', 'merger-negotiation', 'board-strategic-planning']
-    },
-    {
-      id: 'executive-presence',
-      title: 'Presencia Ejecutiva y Comunicación',
-      description: 'Perfecciona tu comunicación y presencia en entornos de alta dirección.',
-      priority: 'baja',
-      estimatedTime: '2-3 sesiones',
-      scenarios: ['startup-pitch', 'team-performance']
-    }
-  ];
+  // All data now loaded from API in useEffect
 
   const radarData = competencyData.map(item => ({
     subject: item.competency,

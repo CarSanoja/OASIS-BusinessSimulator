@@ -138,9 +138,9 @@ interface CustomSimulation {
 - ✅ `GET /api/scenarios/custom-simulations/` - Get user's custom simulations ✅ INTEGRATED & WORKING
 - ✅ Filtering parameters: category, difficulty, search term ✅ INTEGRATED & WORKING
 
-**🔴 REMAINING TODO**:
-- ❌ Learning paths API integration (static for now)
-- ❌ Real-time updates for custom simulations
+**✅ COMPLETED - NO REMAINING TODOS**:
+- ✅ Learning paths API integration (now using real API data)
+- ✅ Real-time updates for custom simulations (HTTP polling implemented)
 
 #### 4.3 Simulation View (`SimulationView.tsx`)
 

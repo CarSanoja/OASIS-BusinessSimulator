@@ -92,8 +92,9 @@ class ApiService {
   private token: string | null = null;
 
   constructor() {
-    this.token = localStorage.getItem('access_token');
+    this.token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
   }
+
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;

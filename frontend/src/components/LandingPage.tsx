@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Eye, EyeOff, Mail, Lock, ChevronRight, Sparkles, TrendingUp, Users, Globe, Play } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { apiService } from "../services/api";
 
 interface LandingPageProps {
   onLogin: (userData: { email: string; name: string }) => void;
@@ -24,15 +25,27 @@ export function LandingPage({ onLogin }: LandingPageProps) {
 
     setIsLoading(true);
     
-    // Simular autenticación
-    setTimeout(() => {
-      const name = email.split('@')[0];
+    try {
+      // Use real API authentication
+      const response = await apiService.demoLogin(email, password);
+      
+      // Store token in localStorage for persistence
+      localStorage.setItem('authToken', response.access);
+      localStorage.setItem('refreshToken', response.refresh);
+      localStorage.setItem('userData', JSON.stringify(response.user));
+      
+      // Call onLogin with real user data
       onLogin({ 
-        email, 
-        name: name.charAt(0).toUpperCase() + name.slice(1)
+        email: response.user.email, 
+        name: response.user.name || response.user.username
       });
+      
+    } catch (error) {
+      console.error('Login failed:', error);
+      alert('Error de autenticación. Verifica tus credenciales.');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const demoCredentials = [

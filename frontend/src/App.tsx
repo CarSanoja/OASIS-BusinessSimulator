@@ -6,6 +6,7 @@ import { SimulationView } from './components/SimulationView';
 import { FeedbackView } from './components/FeedbackView';
 import { ProgressView } from './components/ProgressView';
 import { CreatorView } from './components/CreatorView';
+import { apiService } from './services/api';
 
 interface Scenario {
   id: string;
@@ -70,14 +71,20 @@ export default function App() {
 
   // Check for existing session on app load
   useEffect(() => {
-    const savedUser = localStorage.getItem('oasis-user');
-    if (savedUser) {
+    const savedUser = localStorage.getItem('userData') || localStorage.getItem('oasis-user');
+    const authToken = localStorage.getItem('authToken') || localStorage.getItem('access_token');
+    
+    if (savedUser && authToken) {
       try {
         const userData = JSON.parse(savedUser);
         setUser(userData);
         setCurrentView('dashboard');
       } catch (error) {
+        // Clear invalid session data
         localStorage.removeItem('oasis-user');
+        localStorage.removeItem('userData');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('access_token');
       }
     }
   }, []);
@@ -88,12 +95,24 @@ export default function App() {
     localStorage.setItem('oasis-user', JSON.stringify(userData));
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // Call API logout to invalidate tokens
+      await apiService.logout();
+    } catch (error) {
+      console.error('Logout API call failed:', error);
+    }
+    
+    // Clear local state and storage
     setUser(null);
     setCurrentView('landing');
     setSelectedScenario(null);
     setSimulationData(null);
     localStorage.removeItem('oasis-user');
+    localStorage.removeItem('userData');
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('access_token');
   };
 
   const handleStartSimulation = (scenario: Scenario) => {

@@ -297,6 +297,27 @@ class ApiService {
     });
   }
 
+  async getMessages(simulationId: number, page: number = 1, pageSize: number = 20): Promise<{
+    results: Array<{
+      id: number;
+      sender: string;
+      content: string;
+      timestamp: string;
+      emotion: string | null;
+    }>;
+    pagination: {
+      page: number;
+      page_size: number;
+      total_messages: number;
+      has_next: boolean;
+      has_previous: boolean;
+      next_page: number | null;
+      previous_page: number | null;
+    };
+  }> {
+    return this.request(`/simulations/simulations/${simulationId}/messages/?page=${page}&page_size=${pageSize}`);
+  }
+
   async endSimulation(simulationId: number): Promise<{
     simulation: Simulation;
     analysis: SimulationAnalysis;

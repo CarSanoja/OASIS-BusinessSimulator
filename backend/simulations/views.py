@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
 from django.utils import timezone
 from datetime import timedelta
 from .models import Simulation, Message, SimulationAnalysis
@@ -33,6 +34,43 @@ class SimulationViewSet(viewsets.ModelViewSet):
         print(f"🔍 DEBUG: Received data: {request.data}")
         print(f"🔍 DEBUG: Data type: {type(request.data)}")
         return super().create(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['get'])
+    def messages(self, request, pk=None):
+        """Get paginated messages for a simulation"""
+        simulation = self.get_object()
+        
+        # Get pagination parameters
+        page = int(request.query_params.get('page', 1))
+        page_size = int(request.query_params.get('page_size', 20))
+        
+        # Calculate offset for reverse pagination (newest first)
+        total_messages = simulation.messages.count()
+        offset = max(0, total_messages - (page * page_size))
+        limit = page_size
+        
+        # Get messages in reverse chronological order (newest first)
+        messages = simulation.messages.order_by('-timestamp')[offset:offset + limit]
+        
+        # Serialize messages
+        serializer = MessageSerializer(messages, many=True)
+        
+        # Calculate pagination info
+        has_next = offset > 0
+        has_previous = (page * page_size) < total_messages
+        
+        return Response({
+            'results': serializer.data,
+            'pagination': {
+                'page': page,
+                'page_size': page_size,
+                'total_messages': total_messages,
+                'has_next': has_next,
+                'has_previous': has_previous,
+                'next_page': page + 1 if has_next else None,
+                'previous_page': page - 1 if has_previous else None
+            }
+        })
     
     @action(detail=True, methods=['post'])
     def send_message(self, request, pk=None):

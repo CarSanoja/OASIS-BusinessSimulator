@@ -69,7 +69,11 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [loadingMoreMessages, setLoadingMoreMessages] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Update current time every minute
   useEffect(() => {
@@ -79,7 +83,7 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
     return () => clearInterval(timer);
   }, []);
 
-  // Initialize simulation
+  // Initialize simulation and load messages
   useEffect(() => {
     console.log('SimulationView useEffect - initializing simulation');
     const initializeSimulation = async () => {
@@ -91,6 +95,10 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
         });
         console.log('Simulation created:', newSimulation);
         setSimulation(newSimulation);
+        
+        // Load existing messages
+        await loadMessages(newSimulation.id, 1);
+        
         setLoading(false);
       } catch (err) {
         console.error('Error creating simulation:', err);
@@ -102,10 +110,67 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
     initializeSimulation();
   }, [scenario.id]);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Load messages function
+  const loadMessages = async (simulationId: number, page: number) => {
+    try {
+      setLoadingMoreMessages(true);
+      const response = await apiService.getMessages(simulationId, page, 20);
+      
+      // Convert API messages to local Message format
+      const newMessages: Message[] = response.results.map(msg => ({
+        id: msg.id.toString(),
+        sender: msg.sender,
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+        emotion: msg.emotion
+      }));
+
+      if (page === 1) {
+        // First page - replace all messages
+        setMessages(newMessages);
+      } else {
+        // Subsequent pages - prepend to existing messages
+        setMessages(prev => [...newMessages, ...prev]);
+      }
+
+      setHasMoreMessages(response.pagination.has_next);
+      setCurrentPage(page);
+    } catch (err) {
+      console.error('Error loading messages:', err);
+    } finally {
+      setLoadingMoreMessages(false);
+    }
+  };
+
+  // Load more messages when scrolling to top
+  const loadMoreMessages = async () => {
+    if (!simulation || loadingMoreMessages || !hasMoreMessages) return;
+    
+    const nextPage = currentPage + 1;
+    await loadMessages(simulation.id, nextPage);
+  };
+
+  // Auto-scroll to bottom when new messages arrive (only if user is at bottom)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
+      
+      if (isAtBottom) {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   }, [messages]);
+
+  // Handle scroll for infinite loading
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const isAtTop = container.scrollTop <= 100;
+    
+    if (isAtTop && hasMoreMessages && !loadingMoreMessages) {
+      loadMoreMessages();
+    }
+  };
 
   const getElapsedTime = () => {
     const elapsed = Math.floor((currentTime.getTime() - startTime.getTime()) / 1000);
@@ -451,7 +516,18 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
           </div>
 
           {/* Messages Area - Takes remaining space */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div 
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto p-4"
+            onScroll={handleScroll}
+          >
+            {/* Loading indicator for more messages */}
+            {loadingMoreMessages && (
+              <div className="flex justify-center py-4">
+                <div className="text-white/60 text-sm">Cargando mensajes anteriores...</div>
+              </div>
+            )}
+            
             <div className="max-w-4xl mx-auto space-y-6">
               {messages.map((message, index) => (
                 <div 

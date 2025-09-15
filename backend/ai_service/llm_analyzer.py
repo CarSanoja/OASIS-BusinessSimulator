@@ -133,11 +133,16 @@ class LLMAnalyzer:
             # Get API key from environment
             api_key = os.getenv("OPENAI_API_KEY")
             
-            # Initialize real LLM
+            if not api_key or api_key.startswith("sk-proj-test"):
+                print("⚠️ Using test API key - switching to local structured analysis")
+                raise Exception("Test API key detected")
+            
+            # Initialize real LLM with minimal parameters
             self.llm = ChatOpenAI(
                 model="gpt-4o-mini", 
                 temperature=0.3, 
-                api_key=api_key
+                api_key=api_key,
+                max_tokens=1000
             )
             self.llm_provider = "openai"
             print("✅ LLM Analyzer initialized with REAL OpenAI API + Structured Outputs")
@@ -172,19 +177,27 @@ class LLMAnalyzer:
                 msg_lower = message.lower()
                 words = message.split()
                 
-                # Emotion analysis with context
+                # Enhanced emotion analysis with context
                 emotion = "neutral"
                 confidence = 0.7
+                emotional_indicators = []
                 
-                if any(word in msg_lower for word in ['preocupa', 'problema', 'difícil', 'riesgo']):
+                if any(word in msg_lower for word in ['preocupa', 'problema', 'difícil', 'riesgo', 'preocupación']):
                     emotion = "concerned"
                     confidence = 0.85
-                elif any(word in msg_lower for word in ['excelente', 'perfecto', 'genial', 'acepto']):
+                    emotional_indicators = [word for word in ['preocupa', 'problema', 'difícil', 'riesgo'] if word in msg_lower]
+                elif any(word in msg_lower for word in ['excelente', 'perfecto', 'genial', 'acepto', 'fantástico']):
                     emotion = "positive" 
                     confidence = 0.9
-                elif any(word in msg_lower for word in ['propongo', 'sugiero', 'plan', 'estrategia']):
+                    emotional_indicators = [word for word in ['excelente', 'perfecto', 'genial', 'acepto'] if word in msg_lower]
+                elif any(word in msg_lower for word in ['propongo', 'sugiero', 'plan', 'estrategia', 'confío']):
                     emotion = "confident"
                     confidence = 0.8
+                    emotional_indicators = [word for word in ['propongo', 'sugiero', 'plan', 'estrategia'] if word in msg_lower]
+                elif any(word in msg_lower for word in ['frustrado', 'molesto', 'no estoy de acuerdo']):
+                    emotion = "frustrated"
+                    confidence = 0.85
+                    emotional_indicators = [word for word in ['frustrado', 'molesto'] if word in msg_lower]
                 
                 # Financial extraction with context understanding
                 financial_mentions = []
@@ -200,39 +213,88 @@ class LLMAnalyzer:
                         if any(c.isdigit() for c in prev_word):
                             financial_mentions.append(f"{prev_word} {word}")
                 
+                # Enhanced main topics extraction with context
+                main_topics = []
+                if 'pitch' in msg_lower or 'deck' in msg_lower or 'presentación' in msg_lower:
+                    main_topics.extend(['pitch deck', 'presentación', 'propuesta de valor'])
+                if 'financiero' in msg_lower or 'dinero' in msg_lower or 'precio' in msg_lower:
+                    main_topics.extend(['aspectos financieros', 'valoración', 'presupuesto'])
+                if 'estrategia' in msg_lower or 'plan' in msg_lower:
+                    main_topics.extend(['estrategia', 'plan de negocio'])
+                if 'mercado' in msg_lower or 'competencia' in msg_lower:
+                    main_topics.extend(['análisis de mercado', 'competencia'])
+                if 'equipo' in msg_lower or 'talento' in msg_lower:
+                    main_topics.extend(['equipo', 'recursos humanos'])
+                
                 # Strategic concepts
                 strategic_concepts = []
-                strategy_terms = ['plan', 'estrategia', 'crecimiento', 'expansión', 'objetivo', 'meta']
+                strategy_terms = ['plan', 'estrategia', 'crecimiento', 'expansión', 'objetivo', 'meta', 'roadmap']
                 for term in strategy_terms:
                     if term in msg_lower:
                         strategic_concepts.append(term)
                 
+                # Stakeholders mentioned
+                stakeholders = []
+                stakeholder_terms = ['equipo', 'cliente', 'usuario', 'inversionista', 'junta', 'director', 'ceo']
+                for term in stakeholder_terms:
+                    if term in msg_lower:
+                        stakeholders.append(term)
+                
+                # Action items
+                action_items = []
+                action_terms = ['propongo', 'sugiero', 'plan', 'implementar', 'ejecutar']
+                for term in action_terms:
+                    if term in msg_lower:
+                        action_items.append(f"acción relacionada con {term}")
+                
+                # Concerns raised
+                concerns = []
+                concern_terms = ['preocupa', 'riesgo', 'problema', 'desafío', 'preocupación']
+                for term in concern_terms:
+                    if term in msg_lower:
+                        concerns.append(f"preocupación sobre {term}")
+                
                 # Business impact based on content
                 impact = "medium"
+                urgency = "medium"
                 if any(word in msg_lower for word in ['crítico', 'urgente', 'importante', 'clave']):
                     impact = "high"
+                    urgency = "high"
                 elif any(word in msg_lower for word in ['menor', 'simple', 'básico']):
                     impact = "low"
+                    urgency = "low"
+                elif 'pitch' in msg_lower or 'deck' in msg_lower:
+                    impact = "high"  # Pitch deck discussions are typically high impact
+                    urgency = "medium"
+                
+                # Generate recommended AI approach based on analysis
+                recommended_approach = "¿Podría elaborar más sobre los aspectos específicos que considera más importantes?"
+                if 'pitch' in msg_lower or 'deck' in msg_lower:
+                    recommended_approach = "Perfecto, hablemos del pitch deck. He revisado su presentación y veo algunos puntos interesantes. ¿Podría profundizar en la sección de tracción? Específicamente, me interesa entender mejor las métricas de retención y el LTV/CAC ratio."
+                elif financial_mentions:
+                    recommended_approach = f"Excelente, hablemos de los aspectos financieros. Respecto a {', '.join(financial_mentions[:2])}, ¿podría proporcionar más detalles sobre los supuestos detrás de estas cifras?"
+                elif strategic_concepts:
+                    recommended_approach = f"Me interesa conocer su estrategia. Los conceptos que plantea ({', '.join(strategic_concepts[:2])}) son fundamentales. ¿Cómo planea ejecutarlos?"
                 
                 return json.dumps({
                     "emotion_analysis": {
                         "primary_emotion": emotion,
                         "confidence_score": confidence,
-                        "emotional_indicators": ["contextual analysis"]
+                        "emotional_indicators": emotional_indicators
                     },
                     "key_points": {
-                        "main_topics": strategic_concepts,
+                        "main_topics": main_topics,
                         "financial_mentions": financial_mentions,
                         "strategic_concepts": strategic_concepts,
-                        "stakeholders_mentioned": [],
-                        "action_items": [],
-                        "concerns_raised": []
+                        "stakeholders_mentioned": stakeholders,
+                        "action_items": action_items,
+                        "concerns_raised": concerns
                     },
                     "business_impact": {
                         "impact_level": impact,
-                        "urgency_level": "medium",
-                        "potential_risks": [],
-                        "opportunities": []
+                        "urgency_level": urgency,
+                        "potential_risks": concerns,
+                        "opportunities": action_items
                     },
                     "objective_progress": [],
                     "end_condition_analysis": [],

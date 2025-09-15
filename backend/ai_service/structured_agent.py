@@ -376,19 +376,20 @@ class StructuredSimulationAgent:
             if simulation_obj:
                 conversation_context = conversation_memory.get_conversation_context(simulation_obj)
                 
-                # Check if user is asking about previous insights
-                insight_check = conversation_memory.can_ai_answer_about_insights(
-                    simulation_obj, last_user_message
-                )
-                
-                if insight_check['can_answer']:
-                    # Generate response based on previous insights
-                    return self._generate_insight_based_response(
-                        last_user_message, 
-                        insight_check, 
-                        conversation_context,
-                        state
-                    )
+                # TEMPORARILY DISABLED: Check if user is asking about previous insights
+                # This was causing responses to be based on previous conversations instead of current message
+                # insight_check = conversation_memory.can_ai_answer_about_insights(
+                #     simulation_obj, last_user_message
+                # )
+                # 
+                # if insight_check['can_answer']:
+                #     # Generate response based on previous insights
+                #     return self._generate_insight_based_response(
+                #         last_user_message, 
+                #         insight_check, 
+                #         conversation_context,
+                #         state
+                #     )
             
             # Use LLM for comprehensive analysis
             llm_analysis = llm_analyzer.analyze_message_comprehensive(

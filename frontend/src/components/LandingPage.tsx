@@ -31,6 +31,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
       
       // Store token in localStorage for persistence
       localStorage.setItem('authToken', response.access);
+      localStorage.setItem('access_token', response.access);
       localStorage.setItem('refreshToken', response.refresh);
       localStorage.setItem('userData', JSON.stringify(response.user));
       

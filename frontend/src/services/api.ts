@@ -95,6 +95,11 @@ class ApiService {
     this.token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
   }
 
+  // Method to update token when it changes
+  setToken(token: string) {
+    this.token = token;
+  }
+
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
@@ -154,6 +159,7 @@ class ApiService {
 
     this.token = response.access;
     localStorage.setItem('access_token', response.access);
+    localStorage.setItem('authToken', response.access); // Store in both keys for compatibility
     localStorage.setItem('refresh_token', response.refresh);
     localStorage.setItem('user', JSON.stringify(response.user));
 
@@ -175,6 +181,7 @@ class ApiService {
       // Always clear local storage
       this.token = null;
       localStorage.removeItem('access_token');
+      localStorage.removeItem('authToken');
       localStorage.removeItem('refresh_token');
       localStorage.removeItem('user');
     }

@@ -71,7 +71,7 @@ export default function App() {
 
   // Check for existing session on app load
   useEffect(() => {
-    const savedUser = localStorage.getItem('userData') || localStorage.getItem('oasis-user');
+    const savedUser = localStorage.getItem('userData') || localStorage.getItem('oasis-user') || localStorage.getItem('user');
     const authToken = localStorage.getItem('authToken') || localStorage.getItem('access_token');
     
     if (savedUser && authToken) {
@@ -79,10 +79,13 @@ export default function App() {
         const userData = JSON.parse(savedUser);
         setUser(userData);
         setCurrentView('dashboard');
+        // Ensure API service has the token
+        apiService.setToken(authToken);
       } catch (error) {
         // Clear invalid session data
         localStorage.removeItem('oasis-user');
         localStorage.removeItem('userData');
+        localStorage.removeItem('user');
         localStorage.removeItem('authToken');
         localStorage.removeItem('access_token');
       }
@@ -110,6 +113,7 @@ export default function App() {
     setSimulationData(null);
     localStorage.removeItem('oasis-user');
     localStorage.removeItem('userData');
+    localStorage.removeItem('user');
     localStorage.removeItem('authToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('access_token');

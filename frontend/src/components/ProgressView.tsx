@@ -124,13 +124,6 @@ export function ProgressView({ onBackToDashboard, onStartScenario }: ProgressVie
     }
   ];
 
-  const progressOverTime = [
-    { month: 'Oct', score: 65 },
-    { month: 'Nov', score: 72 },
-    { month: 'Dic', score: 78 },
-    { month: 'Ene', score: 82 }
-  ];
-
   const radarData = competencyData.map(item => ({
     subject: item.competency,
     current: item.current,

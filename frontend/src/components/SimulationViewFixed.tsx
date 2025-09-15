@@ -86,7 +86,9 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
       try {
         setLoading(true);
         console.log('Creating simulation for scenario:', scenario.id);
-        const newSimulation = await apiService.createSimulation(parseInt(scenario.id));
+        const newSimulation = await apiService.createSimulation({
+          scenario: parseInt(scenario.id)
+        });
         console.log('Simulation created:', newSimulation);
         setSimulation(newSimulation);
         setLoading(false);

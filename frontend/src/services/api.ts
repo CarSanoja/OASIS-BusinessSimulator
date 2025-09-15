@@ -262,9 +262,27 @@ class ApiService {
   }
 
   async sendMessage(simulationId: number, content: string): Promise<{
-    user_message: Message;
-    ai_message: Message;
+    user_message: {
+      id: number;
+      sender: string;
+      content: string;
+      timestamp: string;
+      emotion: string | null;
+    };
+    ai_message: {
+      id: number;
+      sender: string;
+      content: string;
+      timestamp: string;
+      emotion: string;
+    };
     objective_progress: Record<string, boolean>;
+    ai_metadata?: {
+      confidence_level: number;
+      key_points: string[];
+      business_impact: string;
+      suggested_follow_up: string | null;
+    };
   }> {
     return this.request(`/simulations/simulations/${simulationId}/send_message/`, {
       method: 'POST',

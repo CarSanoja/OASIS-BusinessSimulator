@@ -190,8 +190,25 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
       // Send message to API and get AI response
       const response = await apiService.sendMessage(simulation.id, messageContent);
       
+      // Convert API response to our Message format
+      const userMessage: Message = {
+        id: response.user_message.id.toString(),
+        sender: 'user',
+        content: response.user_message.content,
+        timestamp: new Date(response.user_message.timestamp),
+        emotion: response.user_message.emotion
+      };
+
+      const aiMessage: Message = {
+        id: response.ai_message.id.toString(),
+        sender: 'ai',
+        content: response.ai_message.content,
+        timestamp: new Date(response.ai_message.timestamp),
+        emotion: response.ai_message.emotion
+      };
+      
       // Add both user and AI messages to state
-      setMessages(prev => [...prev, response.user_message, response.ai_message]);
+      setMessages(prev => [...prev, userMessage, aiMessage]);
       
       // Update objective progress
       setObjectiveProgress(prev => ({ ...prev, ...response.objective_progress }));

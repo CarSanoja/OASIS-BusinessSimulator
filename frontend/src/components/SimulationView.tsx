@@ -52,6 +52,8 @@ interface SimulationViewProps {
 }
 
 export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }: SimulationViewProps) {
+  console.log('SimulationView rendering with scenario:', scenario);
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
@@ -82,12 +84,14 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   useEffect(() => {
     const initializeSimulation = async () => {
       try {
+        console.log('Initializing simulation for scenario:', scenario);
         setLoading(true);
         
         // Create simulation
         const newSimulation = await apiService.createSimulation({
           scenario: parseInt(scenario.id)
         });
+        console.log('Created simulation:', newSimulation);
         setSimulation(newSimulation);
         
         // Add welcome message
@@ -98,14 +102,17 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
           timestamp: new Date(),
           emotion: 'neutral'
         };
+        console.log('Setting welcome message:', welcomeMessage);
         setMessages([welcomeMessage]);
         
         setError(null);
+        console.log('Simulation initialized successfully');
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to initialize simulation');
         console.error('Error initializing simulation:', err);
+        setError(err instanceof Error ? err.message : 'Failed to initialize simulation');
       } finally {
         setLoading(false);
+        console.log('Loading set to false');
       }
     };
 
@@ -187,8 +194,17 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
     setIsAiTyping(true);
 
     try {
+      console.log('Sending message to simulation:', simulation.id, 'Content:', messageContent);
+      
       // Send message to API and get AI response
       const response = await apiService.sendMessage(simulation.id, messageContent);
+      
+      console.log('Received API response:', response);
+      
+      // Validate response structure
+      if (!response || !response.user_message || !response.ai_message) {
+        throw new Error('Invalid API response structure');
+      }
       
       // Convert API response to our Message format
       const userMessage: Message = {
@@ -207,11 +223,19 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
         emotion: response.ai_message.emotion
       };
       
+      console.log('Converted messages:', { userMessage, aiMessage });
+      
       // Add both user and AI messages to state
-      setMessages(prev => [...prev, userMessage, aiMessage]);
+      setMessages(prev => {
+        const newMessages = [...prev, userMessage, aiMessage];
+        console.log('Updated messages array:', newMessages);
+        return newMessages;
+      });
       
       // Update objective progress
-      setObjectiveProgress(prev => ({ ...prev, ...response.objective_progress }));
+      if (response.objective_progress) {
+        setObjectiveProgress(prev => ({ ...prev, ...response.objective_progress }));
+      }
       
       // Update emotional tone based on AI response emotion
       if (response.ai_message.emotion === 'skeptical') {
@@ -236,6 +260,8 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
       
     } catch (err) {
       console.error('Error sending message:', err);
+      setError(err instanceof Error ? err.message : 'Error sending message');
+      
       // Add error message
       const errorMessage: Message = {
         id: Date.now().toString(),
@@ -296,7 +322,10 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
     return 'text-orange-400';
   };
 
+  console.log('Render state:', { loading, error, messages: messages.length, simulation: !!simulation });
+
   if (loading) {
+    console.log('Rendering loading state');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
         <div className="text-center text-white">
@@ -309,6 +338,7 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   }
 
   if (error) {
+    console.log('Rendering error state:', error);
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
         <div className="text-center text-white">
@@ -321,6 +351,8 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
       </div>
     );
   }
+
+  console.log('Rendering main simulation view');
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ minHeight: 'calc(100vh - 80px)' }}>

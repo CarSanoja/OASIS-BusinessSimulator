@@ -3,6 +3,7 @@ import { LandingPage } from './components/LandingPage';
 import { Header } from './components/Header';
 import { DashboardView } from './components/DashboardView';
 import { SimulationView } from './components/SimulationView';
+import { SimulationViewDebug } from './components/SimulationViewDebug';
 import { FeedbackView } from './components/FeedbackView';
 import { ProgressView } from './components/ProgressView';
 import { CreatorView } from './components/CreatorView';
@@ -180,9 +181,8 @@ export default function App() {
       return selectedScenario ? (
         <div>
           <Header user={user} onLogout={handleLogout} currentView="simulation" />
-          <SimulationView
+          <SimulationViewDebug
             scenario={selectedScenario}
-            onEndSimulation={handleEndSimulation}
             onBackToDashboard={handleBackToDashboard}
           />
         </div>

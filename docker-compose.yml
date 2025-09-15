@@ -4,13 +4,12 @@ services:
   backend:
     build: ./backend
     container_name: oasis-backend
+    env_file:
+      - .env
     environment:
       - DEBUG=False
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
       - DATABASE_URL=postgresql://oasis:oasis@db:5432/oasis
       - REDIS_URL=redis://redis:6379/0
-      - ALLOWED_HOSTS=localhost,backend
-      - CORS_ALLOWED_ORIGINS=http://localhost:3009,http://localhost
     volumes:
       - ./backend:/app
       - static_volume:/app/staticfiles

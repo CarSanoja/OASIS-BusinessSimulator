@@ -34,9 +34,58 @@ class Message(models.Model):
     emotion = models.CharField(max_length=50, blank=True, null=True)
     timestamp = models.DateTimeField(auto_now_add=True)
     
+    # LLM Analysis Metadata (for user messages)
+    llm_analysis = models.JSONField(default=dict, blank=True)
+    key_points = ArrayField(models.CharField(max_length=200), default=list, blank=True)
+    financial_mentions = ArrayField(models.CharField(max_length=100), default=list, blank=True)
+    strategic_concepts = ArrayField(models.CharField(max_length=100), default=list, blank=True)
+    stakeholders_mentioned = ArrayField(models.CharField(max_length=100), default=list, blank=True)
+    action_items = ArrayField(models.CharField(max_length=200), default=list, blank=True)
+    concerns_raised = ArrayField(models.CharField(max_length=200), default=list, blank=True)
+    
+    # Business Analysis
+    business_impact_level = models.CharField(max_length=20, blank=True, null=True)
+    urgency_level = models.CharField(max_length=20, blank=True, null=True)
+    confidence_score = models.FloatField(default=0.0)
+    
+    # Objective Progress
+    objective_progress_data = models.JSONField(default=dict, blank=True)
+    
     class Meta:
         db_table = 'messages'
         ordering = ['timestamp']
+
+
+class ConversationInsights(models.Model):
+    """Accumulated insights from conversation analysis"""
+    simulation = models.OneToOneField(Simulation, on_delete=models.CASCADE, related_name='insights')
+    
+    # Accumulated Data
+    all_key_points = ArrayField(models.CharField(max_length=200), default=list)
+    all_financial_mentions = ArrayField(models.CharField(max_length=100), default=list)
+    all_strategic_concepts = ArrayField(models.CharField(max_length=100), default=list)
+    all_stakeholders = ArrayField(models.CharField(max_length=100), default=list)
+    all_action_items = ArrayField(models.CharField(max_length=200), default=list)
+    all_concerns = ArrayField(models.CharField(max_length=200), default=list)
+    
+    # Business Intelligence
+    highest_impact_level = models.CharField(max_length=20, default='medium')
+    peak_urgency_level = models.CharField(max_length=20, default='medium')
+    dominant_emotions = ArrayField(models.CharField(max_length=50), default=list)
+    
+    # Conversation Flow
+    conversation_phases = models.JSONField(default=list)  # Track conversation evolution
+    decision_points = models.JSONField(default=list)      # Track key decision moments
+    
+    # Summary Intelligence
+    conversation_summary = models.TextField(blank=True)
+    main_conclusions = ArrayField(models.TextField(), default=list)
+    unresolved_issues = ArrayField(models.TextField(), default=list)
+    
+    last_updated = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'conversation_insights'
 
 
 class SimulationAnalysis(models.Model):

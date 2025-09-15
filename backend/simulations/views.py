@@ -13,6 +13,7 @@ from .serializers import (
 )
 from ai_service.agents import simulation_agent, SimulationState, AIModelRouter
 from ai_service.structured_agent import structured_simulation_agent
+from ai_service.conversation_memory import conversation_memory
 import random
 
 
@@ -107,8 +108,46 @@ class SimulationViewSet(viewsets.ModelViewSet):
         )
         
         try:
-            # Get structured AI response
-            result = structured_simulation_agent.process_message(state)
+            # Get structured AI response with conversation memory
+            result = structured_simulation_agent.process_message(state, simulation)
+            
+            # Store LLM analysis in user message
+            try:
+                # Extract LLM analysis data properly
+                llm_data = result.get('llm_analysis')
+                if hasattr(llm_data, 'key_points'):
+                    # Direct Pydantic object
+                    conversation_memory.store_message_insights(user_message, llm_data)
+                else:
+                    # Create analysis dict with extracted data
+                    analysis_data = {
+                        'key_points': result.get('key_points', []),
+                        'financial_mentions': llm_data.key_points.financial_mentions if hasattr(llm_data, 'key_points') else [],
+                        'strategic_concepts': llm_data.key_points.strategic_concepts if hasattr(llm_data, 'key_points') else [],
+                        'stakeholders_mentioned': llm_data.key_points.stakeholders_mentioned if hasattr(llm_data, 'key_points') else [],
+                        'business_impact': result.get('business_impact', 'medium'),
+                        'urgency_level': llm_data.business_impact.urgency_level if hasattr(llm_data, 'business_impact') else 'medium',
+                        'conversation_summary': llm_data.conversation_summary if hasattr(llm_data, 'conversation_summary') else ''
+                    }
+                    
+                    conversation_memory.store_message_insights(user_message, analysis_data)
+            except Exception as e:
+                print(f"Error storing insights: {e}")
+                # Try manual extraction as fallback
+                try:
+                    import re
+                    content = user_message.content
+                    financial_data = re.findall(r'\$\d+[KMB]?|Serie\s*[AB]|\d+K\s*usuarios|\d+%', content, re.IGNORECASE)
+                    strategic_data = [word for word in ['plan', 'estrategia', 'expansión', 'crecimiento'] if word in content.lower()]
+                    
+                    user_message.financial_mentions = financial_data[:5]
+                    user_message.strategic_concepts = strategic_data[:5]
+                    user_message.business_impact_level = 'high' if financial_data else 'medium'
+                    user_message.save()
+                    
+                    print(f"Manual extraction saved: {financial_data}, {strategic_data}")
+                except Exception as e2:
+                    print(f"Manual extraction also failed: {e2}")
             
             # Create AI message with enhanced data
             ai_message = Message.objects.create(
@@ -191,7 +230,7 @@ class SimulationViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['get'])
     def transcript(self, request, pk=None):
-        """Get annotated transcript"""
+        """Get annotated transcript with LLM insights"""
         simulation = self.get_object()
         messages = simulation.messages.all().order_by('timestamp')
         
@@ -205,13 +244,50 @@ class SimulationViewSet(viewsets.ModelViewSet):
                 'emotion': message.emotion
             }
             
-            # Add coaching annotations for user messages
+            # Add LLM insights for user messages
+            if message.sender == 'user' and message.llm_analysis:
+                transcript_entry['llm_insights'] = {
+                    'key_points': message.key_points,
+                    'financial_mentions': message.financial_mentions,
+                    'strategic_concepts': message.strategic_concepts,
+                    'business_impact_level': message.business_impact_level,
+                    'urgency_level': message.urgency_level,
+                    'confidence_score': message.confidence_score
+                }
+            
+            # Add coaching annotations
             if message.sender == 'user' and i % 2 == 0:
                 transcript_entry['coaching_note'] = self._generate_coaching_note(message, i)
             
             transcript.append(transcript_entry)
         
         return Response({'transcript': transcript})
+    
+    @action(detail=True, methods=['get'])
+    def insights(self, request, pk=None):
+        """Get accumulated conversation insights"""
+        simulation = self.get_object()
+        
+        try:
+            insights = conversation_memory.get_conversation_context(simulation)
+            return Response({'insights': insights})
+        except Exception as e:
+            return Response({'error': 'No insights available'}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=['post'])
+    def search_insights(self, request, pk=None):
+        """Semantic search through conversation insights"""
+        simulation = self.get_object()
+        query = request.data.get('query', '')
+        
+        if not query:
+            return Response({'error': 'Query parameter required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            search_results = conversation_memory.semantic_search_insights(simulation, query)
+            return Response({'search_results': search_results})
+        except Exception as e:
+            return Response({'error': 'Search failed'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def _generate_analysis(self, simulation):
         """Generate analysis for completed simulation"""

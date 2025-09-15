@@ -261,23 +261,47 @@ Analiza este mensaje de manera comprehensiva y estructurada. Considera:
         # Extract financial mentions
         financial_mentions = []
         import re
-        money_patterns = [r'\$\d+[KMB]?', r'\d+\s*millones?', r'\d+\s*mil', r'presupuesto', r'ROI', r'inversión']
+        
+        # Enhanced financial detection
+        money_patterns = [
+            r'\$\d+[KMB]?',           # $5M, $500K
+            r'\d+K\s*usuarios?',      # 50K usuarios
+            r'\d+%\s*mensual',        # 30% mensual
+            r'Serie\s*[AB]',          # Serie A
+            r'presupuesto',
+            r'ROI',
+            r'inversión',
+            r'financiamiento'
+        ]
+        
         for pattern in money_patterns:
             matches = re.findall(pattern, user_message, re.IGNORECASE)
             financial_mentions.extend(matches)
         
+        # Also check for numbers that might be financial
+        number_matches = re.findall(r'\d+[KMB]?', user_message)
+        for match in number_matches:
+            if any(fin_word in user_message.lower() for fin_word in ['usuarios', 'crecimiento', 'millones', 'mil']):
+                financial_mentions.append(match)
+        
         # Extract strategic concepts
         strategic_concepts = []
-        strategy_terms = ['estrategia', 'plan', 'visión', 'objetivo', 'meta', 'timeline', 'roadmap', 'framework']
+        strategy_terms = ['estrategia', 'plan', 'visión', 'objetivo', 'meta', 'timeline', 'roadmap', 'framework', 'expansión', 'crecimiento', 'usuarios']
         for term in strategy_terms:
             if term in msg_lower:
                 strategic_concepts.append(term)
         
+        # Also extract business concepts
+        business_concepts = ['Serie A', 'Q2', 'mensual', 'activos']
+        for concept in business_concepts:
+            if concept.lower() in msg_lower:
+                strategic_concepts.append(concept)
+        
         # Extract stakeholders
         stakeholders = []
-        stakeholder_terms = ['CEO', 'CFO', 'equipo', 'junta', 'directorio', 'board', 'clientes', 'usuarios']
+        stakeholder_terms = ['CEO', 'CFO', 'equipo', 'junta', 'directorio', 'board', 'clientes', 'usuarios', 'Google', 'ex-Google']
         for term in stakeholder_terms:
-            if term.lower() in msg_lower:
+            if term.lower() in msg_lower or term in user_message:
                 stakeholders.append(term)
         
         # Extract action items

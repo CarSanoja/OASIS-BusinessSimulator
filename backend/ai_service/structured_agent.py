@@ -3,6 +3,7 @@ from typing import Dict, List, Any, Optional, Literal
 from pydantic import BaseModel, Field
 from dataclasses import dataclass
 from .llm_analyzer import llm_analyzer, ComprehensiveMessageAnalysis
+from .conversation_memory import conversation_memory
 
 
 class AIResponse(BaseModel):
@@ -357,8 +358,8 @@ class StructuredSimulationAgent:
     def __init__(self):
         self.ai_service = StructuredAIService()
     
-    def process_message(self, state: SimulationState) -> Dict[str, Any]:
-        """Process a message using LLM analysis and return structured AI response"""
+    def process_message(self, state: SimulationState, simulation_obj=None) -> Dict[str, Any]:
+        """Process a message using LLM analysis with conversation memory"""
         try:
             # Get last user message
             last_user_message = ""
@@ -370,18 +371,43 @@ class StructuredSimulationAgent:
             if not last_user_message:
                 return self._fallback_response()
             
+            # Get conversation context from memory (if available)
+            conversation_context = {}
+            if simulation_obj:
+                conversation_context = conversation_memory.get_conversation_context(simulation_obj)
+                
+                # Check if user is asking about previous insights
+                insight_check = conversation_memory.can_ai_answer_about_insights(
+                    simulation_obj, last_user_message
+                )
+                
+                if insight_check['can_answer']:
+                    # Generate response based on previous insights
+                    return self._generate_insight_based_response(
+                        last_user_message, 
+                        insight_check, 
+                        conversation_context,
+                        state
+                    )
+            
             # Use LLM for comprehensive analysis
             llm_analysis = llm_analyzer.analyze_message_comprehensive(
                 user_message=last_user_message,
                 conversation_history=state.messages,
                 scenario_context=state.scenario_context,
                 user_objectives=state.user_objectives,
-                end_conditions=[],  # Will be implemented
+                end_conditions=[],
                 ai_personality=state.ai_personality
             )
             
             # Generate structured response based on LLM analysis
             structured_response = self.ai_service.generate_structured_response(state)
+            
+            # Enhance response with conversation context
+            if conversation_context:
+                structured_response = self._enhance_with_conversation_context(
+                    structured_response, conversation_context, llm_analysis
+                )
             
             # Use LLM analysis to enhance the response
             enhanced_response = self._enhance_response_with_llm_analysis(
@@ -403,23 +429,85 @@ class StructuredSimulationAgent:
                 "business_impact": llm_analysis.business_impact.impact_level,
                 "suggested_follow_up": enhanced_response.suggested_follow_up,
                 "objective_progress": objective_progress,
-                "llm_analysis": {
-                    "financial_mentions": llm_analysis.key_points.financial_mentions,
-                    "strategic_concepts": llm_analysis.key_points.strategic_concepts,
-                    "stakeholders_mentioned": llm_analysis.key_points.stakeholders_mentioned,
-                    "action_items": llm_analysis.key_points.action_items,
-                    "concerns_raised": llm_analysis.key_points.concerns_raised,
-                    "risk_factors": llm_analysis.business_impact.risk_factors,
-                    "opportunities": llm_analysis.business_impact.opportunities,
-                    "urgency_level": llm_analysis.business_impact.urgency_level,
-                    "conversation_summary": llm_analysis.conversation_summary
-                }
+                "llm_analysis": llm_analysis,  # Store complete analysis for persistence
+                "conversation_context": conversation_context
             }
             
         except Exception as e:
             print(f"LLM processing error: {e}")
-            # Fallback to simple analysis
             return self._fallback_response()
+    
+    def _generate_insight_based_response(self, user_question: str, insight_check: Dict, context: Dict, state: SimulationState) -> Dict[str, Any]:
+        """Generate response based on previous conversation insights"""
+        
+        insight_type = insight_check['insight_type']
+        relevant_data = insight_check['relevant_data']
+        
+        response_content = ""
+        
+        if insight_type == 'key_points':
+            key_points = relevant_data.get('relevant_key_points', [])
+            if key_points:
+                response_content = f"Basándome en nuestra conversación, los puntos clave que hemos discutido incluyen: {', '.join(key_points[:3])}. "
+            else:
+                response_content = "Hasta ahora hemos cubierto varios temas importantes en nuestra conversación. "
+        
+        elif insight_type == 'financial':
+            financial_data = relevant_data.get('relevant_financial_data', [])
+            if financial_data:
+                response_content = f"Respecto a los aspectos financieros, hemos mencionado: {', '.join(financial_data)}. "
+            else:
+                response_content = "En términos financieros, "
+        
+        elif insight_type == 'strategic':
+            strategic_concepts = relevant_data.get('relevant_key_points', [])
+            if strategic_concepts:
+                response_content = f"Estratégicamente, hemos discutido: {', '.join(strategic_concepts[:3])}. "
+        
+        elif insight_type == 'stakeholders':
+            stakeholders = relevant_data.get('relevant_stakeholders', [])
+            if stakeholders:
+                response_content = f"Considerando los stakeholders que hemos mencionado ({', '.join(stakeholders)}), "
+        
+        # Add contextual continuation
+        if context.get('business_impact_level') == 'critical':
+            response_content += "Dado el impacto crítico de estos temas, necesitamos tomar decisiones concretas."
+        else:
+            response_content += "¿Hay algún aspecto específico que quieras profundizar?"
+        
+        return {
+            "response": response_content,
+            "emotion": "neutral",
+            "confidence_level": 9,  # High confidence when referencing previous data
+            "key_points": relevant_data.get('relevant_key_points', [])[:3],
+            "business_impact": context.get('business_impact_level', 'medium'),
+            "suggested_follow_up": "¿Quieres que revisemos algún punto específico?",
+            "objective_progress": {},
+            "is_insight_based": True,
+            "referenced_insights": relevant_data
+        }
+    
+    def _enhance_with_conversation_context(self, response: AIResponse, context: Dict, llm_analysis: ComprehensiveMessageAnalysis) -> AIResponse:
+        """Enhance response with accumulated conversation context"""
+        
+        # Reference previous financial discussions
+        if context.get('financial_data_mentioned') and llm_analysis.key_points.financial_mentions:
+            prev_financial = context['financial_data_mentioned']
+            new_financial = llm_analysis.key_points.financial_mentions
+            response.content += f" Considerando que anteriormente discutimos {', '.join(prev_financial[:2])}, "
+        
+        # Reference conversation phase
+        phase = context.get('conversation_phase', 'opening')
+        if phase == 'negotiation':
+            response.content += " Estamos en una fase crítica de la negociación."
+        elif phase == 'closing':
+            response.content += " Nos acercamos a las decisiones finales."
+        
+        # Reference accumulated concerns
+        if context.get('concerns_raised') and len(context['concerns_raised']) > 2:
+            response.content += " Veo que hemos identificado varias preocupaciones importantes que debemos resolver."
+        
+        return response
     
     def _enhance_response_with_llm_analysis(self, base_response: AIResponse, llm_analysis: ComprehensiveMessageAnalysis) -> AIResponse:
         """Enhance AI response based on LLM analysis"""

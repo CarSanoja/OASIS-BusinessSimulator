@@ -217,12 +217,17 @@ export default function AppRouter() {
     useEffect(() => {
       console.log('SimulationRoute useEffect triggered');
       // If we don't have the selected scenario, load it
-      if (!selectedScenario || selectedScenario.id !== scenarioId) {
-        console.log('Loading scenario because:', { selectedScenario: !!selectedScenario, idMatch: selectedScenario?.id === scenarioId });
+      if (!selectedScenario || selectedScenario.id.toString() !== scenarioId) {
+        console.log('Loading scenario because:', { 
+          selectedScenario: !!selectedScenario, 
+          selectedScenarioId: selectedScenario?.id,
+          scenarioId: scenarioId,
+          idMatch: selectedScenario?.id === scenarioId 
+        });
         const loadScenario = async () => {
           try {
             const scenarios = await apiService.getScenarios();
-            const scenario = scenarios.find(s => s.id === scenarioId);
+            const scenario = scenarios.find(s => s.id.toString() === scenarioId);
             if (scenario) {
               console.log('Found scenario:', scenario);
               setSelectedScenario(scenario);
@@ -271,7 +276,7 @@ export default function AppRouter() {
       const loadScenario = async () => {
         try {
           const scenarios = await apiService.getScenarios();
-          const scenario = scenarios.find(s => s.id === scenarioId);
+          const scenario = scenarios.find(s => s.id.toString() === scenarioId);
           if (scenario) {
             setSelectedScenario(scenario);
           }

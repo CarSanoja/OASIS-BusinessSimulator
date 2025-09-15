@@ -12,6 +12,7 @@ from .serializers import (
     SimulationAnalysisSerializer
 )
 from ai_service.agents import simulation_agent, SimulationState, AIModelRouter
+from ai_service.structured_agent import structured_simulation_agent
 import random
 
 
@@ -106,10 +107,10 @@ class SimulationViewSet(viewsets.ModelViewSet):
         )
         
         try:
-            # Get AI response
-            result = simulation_agent.process_message(state)
+            # Get structured AI response
+            result = structured_simulation_agent.process_message(state)
             
-            # Create AI message
+            # Create AI message with enhanced data
             ai_message = Message.objects.create(
                 simulation=simulation,
                 sender='ai',
@@ -128,7 +129,13 @@ class SimulationViewSet(viewsets.ModelViewSet):
             return Response({
                 'user_message': MessageSerializer(user_message).data,
                 'ai_message': MessageSerializer(ai_message).data,
-                'objective_progress': result.get('objective_progress', {})
+                'objective_progress': result.get('objective_progress', {}),
+                'ai_metadata': {
+                    'confidence_level': result.get('confidence_level', 5),
+                    'key_points': result.get('key_points', []),
+                    'business_impact': result.get('business_impact', 'medium'),
+                    'suggested_follow_up': result.get('suggested_follow_up', '')
+                }
             })
             
         except Exception as e:

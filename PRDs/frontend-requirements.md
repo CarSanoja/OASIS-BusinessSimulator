@@ -352,18 +352,24 @@ interface CustomSimulation {
 ### 6. Key Integration Points
 
 #### AI Service Requirements (Current Implementation)
-**Status**: ✅ IMPLEMENTED with simplified template-based system
+**Status**: ✅ FULLY IMPLEMENTED with structured outputs using Langraph + Pydantic
 
-**Current Implementation**:
-- **SimpleAIService**: Template-based response system with scenario detection
-- **Response Templates**: Pre-defined contextual responses for different scenario types:
-  - merger-negotiation: 4 progressive responses for M&A scenarios
-  - crisis-leadership: 4 responses for crisis management scenarios  
-  - startup-pitch: 4 responses for investor pitch scenarios
-  - default: Generic professional responses
-- **Emotion Detection**: Keyword-based analysis (positive/skeptical/neutral)
-- **Scenario Detection**: Context analysis based on keywords in scenario description
-- **Objective Progress**: Simple keyword matching for completion tracking
+**Enhanced Implementation**:
+- **StructuredAIService**: Advanced response system with Pydantic models
+- **Structured Outputs**: All AI responses use Pydantic models with:
+  - content: Main response text
+  - emotion: Detected emotional tone (5 types)
+  - confidence_level: AI confidence (1-10 scale)
+  - key_points: Extracted key discussion points
+  - business_impact: Impact level (low/medium/high/critical)
+  - suggested_follow_up: Next recommended question
+- **Personality Integration**: Responses modified based on AI personality traits:
+  - Analytical (>70): Adds data/metrics requirements
+  - Aggressive (>70): Changes tone to more confrontational
+  - Impatient (<30): Adds urgency phrases
+  - Inflexible (<30): Adds firmness statements
+- **Enhanced Scenario Detection**: M&A, Crisis, Startup Pitch with contextual responses
+- **Advanced Objective Tracking**: Structured progress analysis with reasoning
 
 **Model Routing Logic**:
 ```python
@@ -379,11 +385,23 @@ def _detect_scenario_type(self, context: str) -> str:
         return 'default'
 ```
 
+**Structured Output Example**:
+```json
+{
+  "content": "Buenos días. Aprecio su interés en nuestra empresa. Sin embargo, antes de discutir valoraciones, necesito entender su visión estratégica...",
+  "emotion": "neutral",
+  "confidence_level": 8,
+  "key_points": ["visión estratégica", "cultura de innovación", "velocidad de desarrollo"],
+  "business_impact": "high", 
+  "suggested_follow_up": "¿Cuáles son los próximos pasos concretos que sugiere?"
+}
+```
+
 **Future Enhancements Ready**:
-- Vector database structure prepared (pgvector models created but disabled)
-- Langraph agent framework structure in place
-- OpenAI/Gemini integration points defined
-- Embedding generation placeholders implemented
+- ✅ Structured outputs with Pydantic models implemented
+- ✅ Langraph agent framework fully operational
+- Vector database structure prepared (pgvector models created)
+- OpenAI/Gemini integration points defined for advanced AI
 
 #### Analytics Requirements (Current Implementation)
 **Status**: ✅ IMPLEMENTED with real-time calculation
@@ -510,26 +528,35 @@ Note: Analytics models exist, views need debugging
 
 #### ✅ Complete Working Demo Results (Individual Testing)
 ```bash
-🎯 CORE FEATURES - ALL WORKING ✅
+🎯 ENHANCED AI WITH STRUCTURED OUTPUTS - ALL WORKING ✅
 
 ✅ Authentication: JWT token generated successfully
 ✅ Scenarios API: 6 scenarios loaded, 2 featured, 6 categories
-✅ Simulation Creation: ID 9 created for Crisis Leadership scenario
-✅ AI Interaction: Contextual response for crisis scenario
-   "CEO, la situación está escalando rápidamente. Los medios están pidiendo declaraciones..."
-✅ Simulation Analysis: Complete analysis generated
-   - Overall Score: 68/100
-   - Strategic Score: 60/100  
-   - Communication Score: 62/100
-   - Emotional Score: 71/100
-   - 5 Strengths identified
-   - 5 Improvement areas
-   - 5 Recommendations provided
-   - Key moments analysis
-   - Tactics effectiveness scoring
+✅ Structured AI Responses: Enhanced with Pydantic models
+   - M&A Simulation (ID 10): "Buenos días. Aprecio su interés en nuestra empresa..."
+     • emotion: "neutral" → "skeptical" (progression working)
+     • confidence_level: 8 → 9 (increasing confidence)
+     • key_points: ["visión estratégica", "múltiplos de mercado", "valor estratégico"]
+     • business_impact: "high" → "critical" (escalation working)
+     • suggested_follow_up: Dynamic recommendations
+   
+   - Crisis Simulation (ID 11): "CEO, la situación está escalando rápidamente..."
+     • emotion: "concerned" (appropriate for crisis)
+     • confidence_level: 9/10
+     • key_points: ["escalación rápida", "medios", "stakeholders"]
+     • business_impact: "critical"
+
+✅ Personality-Based Responses: 
+   - Analytical AI (80): Adds "Necesito ver datos específicos y métricas concretas"
+   - All personality traits affecting response tone and content
+
+✅ Simulation Analysis: Complete structured analysis
+   - Overall Score: 68/100 with component breakdown
+   - Structured recommendations with business context
+   - Key decision moments with impact analysis
 
 🌐 PRODUCTION READY: http://localhost:3009
-🔧 Backend API: http://localhost:8009
+🔧 Enhanced API: http://localhost:8009
 ```
 
 ### 11. Current Deployment Status

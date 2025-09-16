@@ -9,17 +9,9 @@
     }
   ],
   "env": {
-    "VITE_API_URL": "https://api.oasis.somosquanta.com"
-  },
-  "build": {
-    "env": {
-      "VITE_API_URL": "https://api.oasis.somosquanta.com",
-      "VITE_APP_NAME": "OASIS Business Simulator"
-    }
-  },
-  "functions": {
-    "frontend/src/**/*.{js,ts,tsx}": {
-      "maxDuration": 30
-    }
+    "VITE_API_URL": "http://35.153.104.243:8009",
+    "VITE_APP_NAME": "OASIS Business Simulator",
+    "VITE_APP_VERSION": "1.0.0",
+    "VITE_NODE_ENV": "production"
   }
 }

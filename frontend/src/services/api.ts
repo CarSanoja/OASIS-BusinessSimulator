@@ -88,7 +88,7 @@ interface SimulationAnalysis {
 }
 
 class ApiService {
-  private baseURL = '/api';
+  private baseURL = import.meta.env.VITE_API_URL || '/api';
   private token: string | null = null;
 
   constructor() {
@@ -102,7 +102,7 @@ class ApiService {
 
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseURL}${endpoint}`;
+    const url = `${this.baseURL}${this.baseURL.endsWith('/api') ? '' : '/api'}${endpoint}`;
     
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',

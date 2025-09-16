@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+README.md
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+.coverage
+
+# Django
+*.log
+db.sqlite3
+media/
+
+# Environment files
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+*.md
+docs/
+
+# Development
+.pytest_cache/
+htmlcov/
+
+# Deployment
+backups/
+logs/*.log
+
+# Node modules (if any)
+node_modules/
+npm-debug.log
+
+# Temporary files
+tmp/
+temp/

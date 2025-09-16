@@ -18,6 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from health_check import health_check, simple_health_check
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,6 +27,9 @@ urlpatterns = [
     path('api/simulations/', include('simulations.urls')),
     path('api/analytics/', include('analytics.urls')),
     path('api/notifications/', include('notifications.urls')),
+    # Health check endpoints
+    path('api/health/', health_check, name='health_check'),
+    path('health/', simple_health_check, name='simple_health_check'),
 ]
 
 if settings.DEBUG:

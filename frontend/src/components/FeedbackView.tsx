@@ -4,12 +4,12 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { 
-  ArrowLeft, 
-  TrendingUp, 
-  TrendingDown, 
-  Target, 
-  MessageSquare, 
+import {
+  ArrowLeft,
+  TrendingUp,
+  TrendingDown,
+  Target,
+  MessageSquare,
   Star,
   BarChart3,
   CheckCircle2,
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { apiService, type SimulationAnalysis } from "../services/api";
+import { useTranslation } from "react-i18next";
 
 interface Message {
   id: string;
@@ -52,14 +53,15 @@ interface FeedbackViewProps {
   onRestartSimulation: () => void;
 }
 
-export function FeedbackView({ 
-  messages, 
-  duration, 
+export function FeedbackView({
+  messages,
+  duration,
   scenarioTitle,
   simulationId,
-  onBackToDashboard, 
-  onRestartSimulation 
+  onBackToDashboard,
+  onRestartSimulation
 }: FeedbackViewProps) {
+  const { t } = useTranslation(['feedback', 'common']);
   
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
   const [transcript, setTranscript] = useState<any[]>([]);
@@ -198,8 +200,8 @@ export function FeedbackView({
       <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h3 className="text-xl font-semibold mb-2">Generando Análisis</h3>
-          <p className="text-gray-600">Analizando tu desempeño con IA...</p>
+          <h3 className="text-xl font-semibold mb-2">{t('feedback:loadingFeedback')}</h3>
+          <p className="text-gray-600">{t('feedback:analyzingPerformance', { defaultValue: 'Analizando tu desempeño con IA...' })}</p>
         </div>
       </div>
     );
@@ -209,9 +211,9 @@ export function FeedbackView({
     return (
       <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
         <div className="text-center">
-          <h3 className="text-xl font-semibold mb-2 text-red-600">Error al Cargar Análisis</h3>
+          <h3 className="text-xl font-semibold mb-2 text-red-600">{t('feedback:errorLoadingAnalysis', { defaultValue: 'Error al Cargar Análisis' })}</h3>
           <p className="text-gray-600 mb-4">{error}</p>
-          <Button onClick={onBackToDashboard}>Volver al Dashboard</Button>
+          <Button onClick={onBackToDashboard}>{t('feedback:backToDashboard')}</Button>
         </div>
       </div>
     );
@@ -222,7 +224,7 @@ export function FeedbackView({
       <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
         <div className="text-center">
           <h3 className="text-xl font-semibold mb-2">No hay datos de análisis</h3>
-          <Button onClick={onBackToDashboard}>Volver al Dashboard</Button>
+          <Button onClick={onBackToDashboard}>{t('feedback:backToDashboard')}</Button>
         </div>
       </div>
     );
@@ -260,7 +262,7 @@ export function FeedbackView({
             </Button>
             <div>
               <h1 className="text-3xl">Evaluación de Competencias Ejecutivas</h1>
-              <p className="text-gray-600">{scenarioTitle} • {duration} minutos • Estándar IESA</p>
+              <p className="text-gray-600">{scenarioTitle} • {duration} {t('feedback:minutes')} • {t('feedback:executiveStandard', { defaultValue: 'Estándar Ejecutivo' })}</p>
             </div>
           </div>
           <div className="flex gap-3">
@@ -282,13 +284,13 @@ export function FeedbackView({
               <div className={`text-6xl mb-4 ${getScoreColor(feedback.overallScore)}`}>
                 {feedback.overallScore}
               </div>
-              <h2 className="text-2xl mb-2">Puntuación General</h2>
+              <h2 className="text-2xl mb-2">{t('feedback:overallScore')}</h2>
               <p className="text-gray-600 max-w-2xl mx-auto">
-                {feedback.overallScore >= 85 
-                  ? "¡Desempeño excepcional nivel C-Suite! Has demostrado competencias ejecutivas sólidas según estándares IESA de liderazgo empresarial."
+                {feedback.overallScore >= 85
+                  ? t('feedback:exceptionalPerformance', { defaultValue: '¡Desempeño excepcional nivel C-Suite! Has demostrado competencias ejecutivas sólidas según estándares de liderazgo empresarial.' })
                   : feedback.overallScore >= 70
-                  ? "Buen desempeño gerencial. Tienes una base sólida con oportunidades específicas para alcanzar excelencia ejecutiva."
-                  : "Oportunidad de desarrollo significativa. Este es un valioso punto de partida para fortalecer tus competencias de liderazgo."
+                  ? t('feedback:goodPerformance', { defaultValue: 'Buen desempeño gerencial. Tienes una base sólida con oportunidades específicas para alcanzar excelencia ejecutiva.' })
+                  : t('feedback:developmentOpportunity', { defaultValue: 'Oportunidad de desarrollo significativa. Este es un valioso punto de partida para fortalecer tus competencias de liderazgo.' })
                 }
               </p>
             </div>
@@ -298,11 +300,11 @@ export function FeedbackView({
         {/* Detailed Analysis Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">Resumen</TabsTrigger>
-            <TabsTrigger value="strategy">Estrategia</TabsTrigger>
-            <TabsTrigger value="communication">Comunicación</TabsTrigger>
-            <TabsTrigger value="moments">Momentos Clave</TabsTrigger>
-            <TabsTrigger value="recommendations">Recomendaciones</TabsTrigger>
+            <TabsTrigger value="overview">{t('feedback:overviewTab', { defaultValue: 'Resumen' })}</TabsTrigger>
+            <TabsTrigger value="strategy">{t('feedback:strategyTab', { defaultValue: 'Estrategia' })}</TabsTrigger>
+            <TabsTrigger value="communication">{t('feedback:communicationTab', { defaultValue: 'Comunicación' })}</TabsTrigger>
+            <TabsTrigger value="moments">{t('feedback:keyMomentsTab', { defaultValue: 'Momentos Clave' })}</TabsTrigger>
+            <TabsTrigger value="recommendations">{t('feedback:recommendationsTab', { defaultValue: 'Recomendaciones' })}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -352,7 +354,7 @@ export function FeedbackView({
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    Fortalezas Identificadas
+                    {t('feedback:strengths')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -391,7 +393,7 @@ export function FeedbackView({
           <TabsContent value="strategy">
             <Card>
               <CardHeader>
-                <CardTitle>Análisis de Tácticas Utilizadas</CardTitle>
+                <CardTitle>{t('feedback:tacticsAnalysis', { defaultValue: 'Análisis de Tácticas Utilizadas' })}</CardTitle>
                 <p className="text-gray-600">Efectividad de las diferentes estrategias empleadas durante la simulación</p>
               </CardHeader>
               <CardContent>
@@ -462,7 +464,7 @@ export function FeedbackView({
                             <div className="flex items-start gap-2">
                               <AlertCircle className="h-4 w-4 text-blue-600 mt-1 flex-shrink-0" />
                               <div>
-                                <h4 className="font-medium text-sm text-blue-900 mb-1">Análisis del Coach IA</h4>
+                                <h4 className="font-medium text-sm text-blue-900 mb-1">{t('feedback:aiCoachAnalysis', { defaultValue: 'Análisis del Coach IA' })}</h4>
                                 <p className="text-gray-700 text-sm">{moment.analysis}</p>
                               </div>
                             </div>
@@ -504,7 +506,7 @@ export function FeedbackView({
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <span className="font-medium text-sm">
-                              {message.sender === 'user' ? 'Tú' : 'Contraparte'}
+                              {message.sender === 'user' ? t('feedback:you', { defaultValue: 'Tú' }) : t('feedback:counterpart', { defaultValue: 'Contraparte' })}
                             </span>
                             <span className="text-xs text-gray-500">
                               {message.timestamp.toLocaleTimeString()}
@@ -518,9 +520,9 @@ export function FeedbackView({
                               <div className="flex items-start gap-2">
                                 <CheckCircle2 className="h-4 w-4 text-green-600 mt-1 flex-shrink-0" />
                                 <div className="text-sm">
-                                  <span className="font-medium text-green-800">Técnica efectiva: </span>
+                                  <span className="font-medium text-green-800">{t('feedback:effectiveTechnique', { defaultValue: 'Técnica efectiva:' })} </span>
                                   <span className="text-gray-700">
-                                    Excelente uso de preguntas abiertas para generar diálogo constructivo.
+                                    {t('feedback:openQuestionsComment', { defaultValue: 'Excelente uso de preguntas abiertas para generar diálogo constructivo.' })}
                                   </span>
                                 </div>
                               </div>
@@ -532,9 +534,9 @@ export function FeedbackView({
                               <div className="flex items-start gap-2">
                                 <AlertCircle className="h-4 w-4 text-orange-600 mt-1 flex-shrink-0" />
                                 <div className="text-sm">
-                                  <span className="font-medium text-orange-800">Oportunidad: </span>
+                                  <span className="font-medium text-orange-800">{t('feedback:opportunity', { defaultValue: 'Oportunidad:' })} </span>
                                   <span className="text-gray-700">
-                                    Considera ser más específico con los números para aumentar credibilidad.
+                                    {t('feedback:specificNumbersComment', { defaultValue: 'Considera ser más específico con los números para aumentar credibilidad.' })}
                                   </span>
                                 </div>
                               </div>
@@ -553,8 +555,8 @@ export function FeedbackView({
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Plan de Desarrollo Ejecutivo IESA</CardTitle>
-                  <p className="text-gray-600">Recomendaciones específicas alineadas con el curriculum de liderazgo y las competencias del programa MBA</p>
+                  <CardTitle>{t('feedback:developmentPlan', { defaultValue: 'Plan de Desarrollo Ejecutivo' })}</CardTitle>
+                  <p className="text-gray-600">{t('feedback:developmentPlanDesc', { defaultValue: 'Recomendaciones específicas alineadas con el curriculum de liderazgo y las competencias del programa MBA' })}</p>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -562,7 +564,7 @@ export function FeedbackView({
                       <div key={index} className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
                         <BarChart3 className="h-5 w-5 text-blue-600 mt-0.5" />
                         <div>
-                          <p className="font-medium text-blue-900">Recomendación {index + 1}</p>
+                          <p className="font-medium text-blue-900">{t('feedback:recommendation')} {index + 1}</p>
                           <p className="text-blue-800">{recommendation}</p>
                         </div>
                       </div>
@@ -573,23 +575,23 @@ export function FeedbackView({
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Próximos Pasos</CardTitle>
+                  <CardTitle>{t('feedback:nextSteps', { defaultValue: 'Próximos Pasos' })}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Button onClick={onRestartSimulation} className="h-auto p-4 justify-start">
                       <RefreshCw className="h-5 w-5 mr-3" />
                       <div className="text-left">
-                        <div className="font-medium">Repetir Simulación</div>
-                        <div className="text-sm opacity-80">Aplica los aprendizajes</div>
+                        <div className="font-medium">{t('feedback:repeatSimulation', { defaultValue: 'Repetir Simulación' })}</div>
+                        <div className="text-sm opacity-80">{t('feedback:applyLearnings', { defaultValue: 'Aplica los aprendizajes' })}</div>
                       </div>
                     </Button>
                     
                     <Button variant="outline" onClick={onBackToDashboard} className="h-auto p-4 justify-start">
                       <Target className="h-5 w-5 mr-3" />
                       <div className="text-left">
-                        <div className="font-medium">Nuevo Escenario</div>
-                        <div className="text-sm opacity-80">Practica habilidades diferentes</div>
+                        <div className="font-medium">{t('feedback:newScenario', { defaultValue: 'Nuevo Escenario' })}</div>
+                        <div className="text-sm opacity-80">{t('feedback:practiceDifferentSkills', { defaultValue: 'Practica habilidades diferentes' })}</div>
                       </div>
                     </Button>
                   </div>

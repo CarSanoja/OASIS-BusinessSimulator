@@ -104,13 +104,13 @@ class ApiService {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
     
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
 
     if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
+      headers['Authorization'] = `Bearer ${this.token}`;
     }
 
     console.log('🔍 DEBUG: Making request to:', url);
@@ -297,6 +297,31 @@ class ApiService {
     });
   }
 
+  async getSimulationsByScenario(scenarioId: number): Promise<{
+    simulations: Array<{
+      id: number;
+      status: string;
+      started_at: string;
+      ended_at?: string;
+      duration_minutes?: number;
+      title: string;
+      summary: string;
+      last_message_preview: string;
+      objectives_completed: number;
+      total_objectives: number;
+      final_score?: number;
+    }>;
+    stats: {
+      total_attempts: number;
+      active_simulation?: number;
+      best_score: number;
+      average_duration: number;
+      total_objectives_completed: number;
+    };
+  }> {
+    return this.request(`/simulations/simulations/by_scenario/?scenario_id=${scenarioId}`);
+  }
+
   async getMessages(simulationId: number, page: number = 1, pageSize: number = 20): Promise<{
     results: Array<{
       id: number;
@@ -432,6 +457,15 @@ class ApiService {
 
   async getUnreadCount(): Promise<{ unread_count: number }> {
     return this.request('/notifications/notifications/unread_count/');
+  }
+
+  // Live Metrics
+  async getLiveMetrics(simulationId: number): Promise<any> {
+    return this.request(`/simulations/simulations/${simulationId}/live_metrics/`);
+  }
+
+  async getDeepAnalytics(simulationId: number): Promise<any> {
+    return this.request(`/simulations/simulations/${simulationId}/deep_analytics/`);
   }
 
 }

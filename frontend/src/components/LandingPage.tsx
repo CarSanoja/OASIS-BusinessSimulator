@@ -7,12 +7,15 @@ import { Badge } from "./ui/badge";
 import { Eye, EyeOff, Mail, Lock, ChevronRight, Sparkles, TrendingUp, Users, Globe, Play } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { apiService } from "../services/api";
+import { useTranslation } from "react-i18next";
+import { LanguageSelector } from "./LanguageSelector";
 
 interface LandingPageProps {
   onLogin: (userData: { email: string; name: string }) => void;
 }
 
 export function LandingPage({ onLogin }: LandingPageProps) {
+  const { t } = useTranslation(['auth', 'common']);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -43,20 +46,25 @@ export function LandingPage({ onLogin }: LandingPageProps) {
       
     } catch (error) {
       console.error('Login failed:', error);
-      alert('Error de autenticación. Verifica tus credenciales.');
+      alert(t('auth:authError'));
     } finally {
       setIsLoading(false);
     }
   };
 
   const demoCredentials = [
-    { email: 'maria.rodriguez@iesa.edu.ve', role: 'MBA Student', name: 'María Rodríguez' },
+    { email: 'maria.rodriguez@university.edu', role: 'MBA Student', name: 'María Rodríguez' },
     { email: 'carlos.mendoza@corp.com', role: 'Senior Executive', name: 'Carlos Mendoza' },
     { email: 'ana.silva@startup.com', role: 'Entrepreneur', name: 'Ana Silva' }
   ];
 
   return (
     <div className="min-h-screen relative overflow-hidden">
+      {/* Language Selector */}
+      <div className="absolute top-4 right-4 z-20">
+        <LanguageSelector />
+      </div>
+
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
@@ -81,9 +89,8 @@ export function LandingPage({ onLogin }: LandingPageProps) {
               </div>
               <div className="text-left">
                 <h1 className="text-5xl font-bold text-white mb-2">
-                  OASIS
+                  {t('auth:brandTitle')}
                 </h1>
-                <p className="text-cyan-300 font-medium">by IESA Business School</p>
               </div>
             </div>
 
@@ -91,18 +98,17 @@ export function LandingPage({ onLogin }: LandingPageProps) {
             <div className="space-y-6">
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 backdrop-blur-sm border border-cyan-300/30 rounded-full px-6 py-3">
                 <Sparkles className="h-5 w-5 text-cyan-400" />
-                <span className="text-cyan-300 font-medium">El Futuro del Aprendizaje Inmersivo</span>
+                <span className="text-cyan-300 font-medium">{t('auth:heroTagline')}</span>
               </div>
 
               <h2 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
-                Desarrolla competencias 
-                <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent"> ejecutivas </span>
-                con IA avanzada
+                {t('auth:heroTitle')}
+                <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent"> {t('auth:heroHighlight')} </span>
+                {t('auth:heroTitle2')}
               </h2>
 
               <p className="text-xl text-white/80 leading-relaxed max-w-2xl">
-                Practica decisiones críticas de C-Suite en simulaciones inmersivas. 
-                Desde role-playing ejecutivo hasta coaching personalizado con inteligencia artificial.
+                {t('auth:heroDescription')}
               </p>
 
               {/* Feature Highlights */}
@@ -112,9 +118,9 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
                       <Play className="h-5 w-5 text-white" />
                     </div>
-                    <h3 className="font-semibold text-white">Role-Playing IA</h3>
+                    <h3 className="font-semibold text-white">{t('auth:feature1Title')}</h3>
                   </div>
-                  <p className="text-white/70 text-sm">Simulaciones ejecutivas con personajes de IA realistas</p>
+                  <p className="text-white/70 text-sm">{t('auth:feature1Description')}</p>
                 </div>
 
                 <div className="glass-card p-4 rounded-2xl hover-lift">
@@ -122,9 +128,9 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                     <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
                       <TrendingUp className="h-5 w-5 text-white" />
                     </div>
-                    <h3 className="font-semibold text-white">Analytics Avanzado</h3>
+                    <h3 className="font-semibold text-white">{t('auth:feature2Title')}</h3>
                   </div>
-                  <p className="text-white/70 text-sm">Feedback detallado y métricas de rendimiento</p>
+                  <p className="text-white/70 text-sm">{t('auth:feature2Description')}</p>
                 </div>
 
                 <div className="glass-card p-4 rounded-2xl hover-lift">
@@ -132,9 +138,9 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                     <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
                       <Users className="h-5 w-5 text-white" />
                     </div>
-                    <h3 className="font-semibold text-white">Nivel C-Suite</h3>
+                    <h3 className="font-semibold text-white">{t('auth:feature3Title')}</h3>
                   </div>
-                  <p className="text-white/70 text-sm">Escenarios de alta dirección empresarial</p>
+                  <p className="text-white/70 text-sm">{t('auth:feature3Description')}</p>
                 </div>
 
                 <div className="glass-card p-4 rounded-2xl hover-lift">
@@ -142,9 +148,9 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                     <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center">
                       <Globe className="h-5 w-5 text-white" />
                     </div>
-                    <h3 className="font-semibold text-white">Contexto LATAM</h3>
+                    <h3 className="font-semibold text-white">{t('auth:feature4Title')}</h3>
                   </div>
-                  <p className="text-white/70 text-sm">Mercados y regulaciones latinoamericanas</p>
+                  <p className="text-white/70 text-sm">{t('auth:feature4Description')}</p>
                 </div>
               </div>
 
@@ -159,10 +165,10 @@ export function LandingPage({ onLogin }: LandingPageProps) {
             <CardHeader className="text-center pb-4">
 
               <CardTitle className="text-2xl text-gray-900">
-                ¡Bienvenido de vuelta!
+                {t('auth:title')}
               </CardTitle>
               <p className="text-gray-600">
-                Accede a tu entrenamiento ejecutivo personalizado
+                {t('auth:subtitle')}
               </p>
             </CardHeader>
 
@@ -170,14 +176,14 @@ export function LandingPage({ onLogin }: LandingPageProps) {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-gray-700 font-medium">
-                    Email corporativo
+                    {t('auth:emailLabel')}
                   </Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                     <Input
                       id="email"
                       type="email"
-                      placeholder="tu.email@empresa.com"
+                      placeholder={t('auth:emailPlaceholder')}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="pl-10 bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -188,14 +194,14 @@ export function LandingPage({ onLogin }: LandingPageProps) {
 
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-gray-700 font-medium">
-                    Contraseña
+                    {t('auth:passwordLabel')}
                   </Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
+                      placeholder={t('auth:passwordPlaceholder')}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       className="pl-10 pr-10 bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -221,11 +227,11 @@ export function LandingPage({ onLogin }: LandingPageProps) {
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Validando credenciales...</span>
+                      <span>{t('auth:loggingIn')}</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <span>Iniciar Sesión</span>
+                      <span>{t('auth:loginButton')}</span>
                       <ChevronRight className="h-5 w-5" />
                     </div>
                   )}
@@ -235,7 +241,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
               {/* Demo Accounts */}
               <div className="pt-4 border-t border-gray-200">
                 <p className="text-gray-600 text-sm mb-4 text-center">
-                  🧪 Cuentas de demostración:
+                  🧪 {t('auth:demoAccounts')}:
                 </p>
                 <div className="space-y-2">
                   {demoCredentials.map((demo, index) => (
@@ -265,7 +271,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
               {/* Footer */}
               <div className="text-center text-sm text-gray-500">
                 <p className="text-xs">
-                  Al continuar, aceptas nuestros términos de servicio y política de privacidad.
+                  {t('auth:termsText')}
                 </p>
               </div>
             </CardContent>

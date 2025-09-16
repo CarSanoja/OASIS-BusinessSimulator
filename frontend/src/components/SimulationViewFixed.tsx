@@ -28,13 +28,6 @@ import {
 } from "lucide-react";
 import { apiService, type Message, type Simulation } from "../services/api";
 
-interface Message {
-  id: string;
-  sender: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-  emotion?: string;
-}
 
 interface Scenario {
   id: string;
@@ -135,7 +128,7 @@ export function SimulationView({ scenario, simulation: propSimulation, onEndSimu
       // Convert API messages to local Message format
       const newMessages: Message[] = response.results.map(msg => ({
         id: msg.id.toString(),
-        sender: msg.sender,
+        sender: msg.sender as 'user' | 'ai',
         content: msg.content,
         timestamp: new Date(msg.timestamp),
         emotion: msg.emotion

@@ -1,7 +1,9 @@
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Avatar, AvatarContent, AvatarFallback } from "./ui/avatar";
-import { LogOut, User, Settings, BarChart3, Bell, Sparkles } from "lucide-react";
+import { LogOut, User, Settings, BarChart3, Globe, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { useState, useEffect, useRef } from "react";
 
 interface UserData {
   email: string;
@@ -15,6 +17,24 @@ interface HeaderProps {
 }
 
 export function Header({ user, onLogout, currentView = 'dashboard' }: HeaderProps) {
+  const { t, i18n } = useTranslation(['common', 'dashboard']);
+  const [isLanguageDropdownOpen, setIsLanguageDropdownOpen] = useState(false);
+  const languageDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close language dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (languageDropdownRef.current && !languageDropdownRef.current.contains(event.target as Node)) {
+        setIsLanguageDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -26,13 +46,32 @@ export function Header({ user, onLogout, currentView = 'dashboard' }: HeaderProp
 
   const getViewTitle = (view: string) => {
     switch (view) {
-      case 'dashboard': return 'Dashboard Principal';
-      case 'simulation': return 'Simulación Activa';
-      case 'feedback': return 'Análisis de Rendimiento';
-      case 'progress': return 'Panel de Progreso';
-      case 'creator': return 'Constructor de Simulaciones';
+      case 'dashboard': return t('dashboard:title');
+      case 'simulation': return t('common:activeSimulation', { defaultValue: 'Simulación Activa' });
+      case 'feedback': return t('common:performanceAnalysis', { defaultValue: 'Análisis de Rendimiento' });
+      case 'progress': return t('common:progressPanel', { defaultValue: 'Panel de Progreso' });
+      case 'creator': return t('common:simulationBuilder', { defaultValue: 'Constructor de Simulaciones' });
       default: return 'OASIS';
     }
+  };
+
+  const languages = [
+    { code: 'es', name: 'Español', flag: '🇪🇸' },
+    { code: 'en', name: 'English', flag: '🇺🇸' }
+  ];
+
+  const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
+
+  const changeLanguage = (lng: string) => {
+    console.log('🌐 Language change requested:', { from: i18n.language, to: lng });
+    i18n.changeLanguage(lng);
+    localStorage.setItem('oasisLanguage', lng);
+    setIsLanguageDropdownOpen(false);
+    console.log('✅ Language changed and stored:', {
+      newLanguage: lng,
+      currentLanguage: i18n.language,
+      stored: localStorage.getItem('oasisLanguage')
+    });
   };
 
   return (
@@ -52,7 +91,6 @@ export function Header({ user, onLogout, currentView = 'dashboard' }: HeaderProp
                 <h1 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   OASIS
                 </h1>
-                <p className="text-xs text-gray-500">by IESA</p>
               </div>
             </div>
             
@@ -64,26 +102,47 @@ export function Header({ user, onLogout, currentView = 'dashboard' }: HeaderProp
             </div>
           </div>
 
-          {/* Center: Status Indicators */}
-          <div className="hidden lg:flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="text-sm text-blue-800 font-medium">Módulo Role-Playing</span>
-            </div>
-            
-            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              <Sparkles className="h-4 w-4 text-amber-600" />
-              <span className="text-sm text-amber-800 font-medium">3 módulos próximos</span>
-            </div>
-          </div>
 
           {/* Right: User Menu */}
           <div className="flex items-center gap-4">
-            {/* Notifications */}
-            <Button variant="ghost" size="sm" className="relative">
-              <Bell className="h-5 w-5 text-gray-600" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
-            </Button>
+            {/* Language Selector */}
+            <div className="relative" ref={languageDropdownRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2"
+                onClick={() => {
+                  console.log('🌐 Language selector clicked, current:', i18n.language);
+                  setIsLanguageDropdownOpen(!isLanguageDropdownOpen);
+                }}
+              >
+                <Globe className="h-4 w-4" />
+                <span className="hidden sm:inline">{currentLanguage.flag} {currentLanguage.name}</span>
+              </Button>
+
+              {isLanguageDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50 min-w-[150px]">
+                  {languages.map((language) => (
+                    <button
+                      key={language.code}
+                      onClick={() => {
+                        console.log(`${language.flag} ${language.name} option clicked`);
+                        changeLanguage(language.code);
+                      }}
+                      className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center justify-between text-gray-700 hover:text-gray-900"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{language.flag}</span>
+                        <span className="text-sm">{language.name}</span>
+                      </div>
+                      {i18n.language === language.code && (
+                        <Check className="h-4 w-4 text-blue-600" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* User Info + Logout */}
             <div className="flex items-center gap-3">
@@ -102,14 +161,14 @@ export function Header({ user, onLogout, currentView = 'dashboard' }: HeaderProp
                 </div>
               </div>
 
-              <Button 
+              <Button
                 onClick={onLogout}
-                variant="outline" 
+                variant="outline"
                 size="sm"
                 className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300"
               >
                 <LogOut className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Cerrar Sesión</span>
+                <span className="hidden sm:inline">{t('common:logout')}</span>
               </Button>
             </div>
           </div>

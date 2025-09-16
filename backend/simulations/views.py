@@ -15,6 +15,7 @@ from .serializers import (
 from ai_service.agents import simulation_agent, SimulationState, AIModelRouter
 from ai_service.structured_agent import structured_simulation_agent
 from ai_service.conversation_memory import conversation_memory
+from .metrics_service import live_metrics_service
 import random
 
 
@@ -32,9 +33,96 @@ class SimulationViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         print(f"🔍 DEBUG: Received data: {request.data}")
-        print(f"🔍 DEBUG: Data type: {type(request.data)}")
-        return super().create(request, *args, **kwargs)
+
+        # Check if there's already an active simulation for this scenario
+        # (temporarily disabled for testing multiple simulations)
+        scenario_id = request.data.get('scenario')
+        # if scenario_id:
+        #     active_sim = Simulation.objects.filter(
+        #         user=request.user,
+        #         scenario_id=scenario_id,
+        #         status='active'
+        #     ).first()
+        #
+        #     if active_sim:
+        #         # Return the existing active simulation instead of creating a new one
+        #         serializer = self.get_serializer(active_sim)
+        #         return Response(serializer.data, status=status.HTTP_200_OK)
+
+        # Create new simulation
+        response = super().create(request, *args, **kwargs)
+        print(f"🔧 Response status code: {response.status_code}")
+        print(f"🔧 Response data: {response.data}")
+
+        # Update title and objectives after successful creation
+        if response.status_code == status.HTTP_201_CREATED:
+            simulation_id = response.data.get('id')
+            print(f"🔧 Post-processing simulation ID: {simulation_id}")
+            if simulation_id:
+                try:
+                    simulation = Simulation.objects.get(id=simulation_id)
+                    print(f"🔧 Found simulation: {simulation}")
+
+                    simulation.title = f"Intento #{simulation.id} - {timezone.now().strftime('%d/%m/%Y %H:%M')}"
+                    print(f"🔧 Set title: {simulation.title}")
+
+                    if simulation.scenario and hasattr(simulation.scenario, 'objectives'):
+                        simulation.total_objectives = len(simulation.scenario.objectives or [])
+                        print(f"🔧 Set total_objectives: {simulation.total_objectives}")
+
+                    simulation.objectives_completed = 0
+                    simulation.save()
+                    print(f"🔧 Simulation saved successfully")
+
+                    # Return updated data
+                    response.data = SimulationSerializer(simulation).data
+                    print(f"🔧 Response data updated")
+                except Exception as e:
+                    print(f"❌ Error updating simulation fields: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+        return response
     
+    @action(detail=False, methods=['get'])
+    def by_scenario(self, request):
+        """Get all simulations for a specific scenario"""
+        scenario_id = request.query_params.get('scenario_id')
+        if not scenario_id:
+            return Response(
+                {'error': 'scenario_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        simulations = Simulation.objects.filter(
+            user=request.user,
+            scenario_id=scenario_id
+        ).order_by('-started_at')
+
+        # Update last_message_preview for each simulation
+        for sim in simulations:
+            last_msg = sim.messages.order_by('-timestamp').first()
+            if last_msg:
+                sim.last_message_preview = last_msg.content[:150] + '...' if len(last_msg.content) > 150 else last_msg.content
+                sim.save()
+
+        serializer = self.get_serializer(simulations, many=True)
+
+        # Calculate aggregate stats
+        completed_sims = simulations.filter(status='completed')
+        stats = {
+            'total_attempts': simulations.count(),
+            'active_simulation': simulations.filter(status='active').first().id if simulations.filter(status='active').exists() else None,
+            'best_score': max([s.final_score for s in completed_sims if s.final_score], default=0),
+            'average_duration': sum([s.duration_minutes or 0 for s in completed_sims]) / len(completed_sims) if completed_sims else 0,
+            'total_objectives_completed': sum([s.objectives_completed for s in simulations])
+        }
+
+        return Response({
+            'simulations': serializer.data,
+            'stats': stats
+        })
+
     @action(detail=True, methods=['get'])
     def messages(self, request, pk=None):
         """Get paginated messages for a simulation"""
@@ -242,6 +330,15 @@ class SimulationViewSet(viewsets.ModelViewSet):
         simulation.ended_at = timezone.now()
         duration = simulation.ended_at - simulation.started_at
         simulation.duration_minutes = int(duration.total_seconds() / 60)
+
+        # Update summary fields
+        last_msg = simulation.messages.order_by('-timestamp').first()
+        if last_msg:
+            simulation.last_message_preview = last_msg.content[:150] + '...' if len(last_msg.content) > 150 else last_msg.content
+
+        # Count completed objectives (simplified for now)
+        simulation.objectives_completed = simulation.messages.filter(sender='user').count() // 2  # Placeholder logic
+
         simulation.save()
         
         # Generate analysis
@@ -429,5 +526,88 @@ class SimulationViewSet(viewsets.ModelViewSet):
             "Buen uso de storytelling para conectar emocionalmente.",
             "Podrías haber aprovechado mejor este momento para una concesión estratégica."
         ]
-        
+
         return coaching_notes[index % len(coaching_notes)]
+
+    @action(detail=True, methods=['get'])
+    def live_metrics(self, request, pk=None):
+        """Get real-time metrics for the simulation panel"""
+        simulation = self.get_object()
+
+        # Validate simulation belongs to the user
+        if simulation.user != request.user:
+            return Response(
+                {'error': 'Simulation not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check if simulation has messages to analyze
+        if simulation.messages.count() == 0:
+            return Response({
+                'session_kpis': {
+                    'duration_minutes': 0,
+                    'total_messages': 0,
+                    'user_messages': 0,
+                    'ai_messages': 0,
+                    'objectives_progress': {'completed': 0, 'total': 0, 'percentage': 0, 'details': []},
+                    'momentum': {'level': 'starting', 'trend': 'stable', 'score': 0}
+                },
+                'emotional_metrics': {
+                    'emotional_tone': 50,
+                    'tone_trend': 'stable',
+                    'dominant_emotion': 'neutral',
+                    'urgency_level': 'low'
+                },
+                'business_metrics': {
+                    'financial_mentions': [],
+                    'stakeholders': [],
+                    'risk_level': 'low',
+                    'business_impact': 'low'
+                },
+                'progress_metrics': {
+                    'engagement_level': 'low',
+                    'information_density': 'low',
+                    'decision_points': [],
+                    'key_moments': []
+                },
+                'last_updated': timezone.now().isoformat(),
+                'status': 'no_messages'
+            })
+
+        try:
+            metrics = live_metrics_service.get_live_metrics(simulation)
+            return Response(metrics)
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to calculate live metrics: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'])
+    def deep_analytics(self, request, pk=None):
+        """Get deep analytics for the detailed modal"""
+        simulation = self.get_object()
+
+        # Validate simulation belongs to the user
+        if simulation.user != request.user:
+            return Response(
+                {'error': 'Simulation not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Require at least 2 user messages for meaningful analytics
+        user_message_count = simulation.messages.filter(sender='user').count()
+        if user_message_count < 2:
+            return Response(
+                {'error': 'Insufficient conversation data for deep analytics. At least 2 user messages required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            analytics = live_metrics_service.get_deep_analytics(simulation)
+            return Response(analytics)
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to calculate deep analytics: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

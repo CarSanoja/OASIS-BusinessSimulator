@@ -1,0 +1,95 @@
+{
+  "title": "Crear Simulación Personalizada",
+  "description": "Diseña tu propio escenario de entrenamiento ejecutivo",
+  "scenarioTitle": "Título del Escenario",
+  "scenarioTitlePlaceholder": "Ej: Negociación con Cliente Difícil",
+  "scenarioDescription": "Descripción",
+  "scenarioDescriptionPlaceholder": "Describe el contexto y los objetivos del escenario...",
+  "difficulty": "Dificultad",
+  "selectDifficulty": "Selecciona la dificultad",
+  "beginner": "Principiante",
+  "intermediate": "Intermedio",
+  "advanced": "Avanzado",
+  "expert": "Experto",
+  "estimatedDuration": "Duración Estimada",
+  "selectDuration": "Selecciona la duración",
+  "short": "Corta (5-10 min)",
+  "medium": "Media (10-20 min)",
+  "long": "Larga (20+ min)",
+  "aiCharacter": "Personaje de IA",
+  "aiCharacterName": "Nombre del Personaje",
+  "aiCharacterNamePlaceholder": "Ej: Carlos Mendoza",
+  "aiCharacterRole": "Rol del Personaje",
+  "aiCharacterRolePlaceholder": "Ej: CEO de Empresa Multinacional",
+  "aiCharacterPersonality": "Personalidad y Comportamiento",
+  "aiCharacterPersonalityPlaceholder": "Describe cómo debe comportarse el personaje de IA...",
+  "objectives": "Objetivos de Aprendizaje",
+  "addObjective": "Agregar Objetivo",
+  "objectivePlaceholder": "Ej: Mejorar habilidades de negociación",
+  "tags": "Etiquetas",
+  "tagsPlaceholder": "Separa las etiquetas con comas",
+  "preview": "Vista Previa",
+  "createButton": "Crear Simulación",
+  "cancelButton": "Cancelar",
+  "backToDashboard": "Volver al Dashboard",
+  "creatingSimulation": "Creando simulación...",
+  "simulationCreated": "¡Simulación creada exitosamente!",
+  "errorCreating": "Error al crear la simulación",
+  "saveError": "Error al guardar la simulación. Por favor, intenta de nuevo.",
+  "skills": {
+    "negotiation": "Negociación",
+    "leadership": "Liderazgo",
+    "assertiveCommunication": "Comunicación Asertiva",
+    "strategicThinking": "Pensamiento Estratégico",
+    "conflictResolution": "Resolución de Conflictos",
+    "decisionMaking": "Toma de Decisiones",
+    "crisisManagement": "Gestión de Crisis",
+    "presentations": "Presentaciones",
+    "coaching": "Coaching",
+    "delegation": "Delegación",
+    "innovation": "Innovación",
+    "financialAnalysis": "Análisis Financiero"
+  },
+  "difficulty": {
+    "beginner": "Principiante",
+    "beginnerDesc": "Ideal para primeras experiencias",
+    "intermediate": "Intermedio",
+    "intermediateDesc": "Requiere experiencia previa",
+    "advanced": "Avanzado",
+    "advancedDesc": "Para profesionales experimentados",
+    "expert": "Experto",
+    "expertDesc": "Máximo nivel de complejidad"
+  },
+  "categories": {
+    "executiveLeadership": "Liderazgo Ejecutivo",
+    "corporateStrategy": "Estrategia Corporativa",
+    "entrepreneurship": "Emprendimiento",
+    "globalStrategy": "Estrategia Global",
+    "talentManagement": "Gestión de Talento",
+    "corporateGovernance": "Gobernanza Corporativa"
+  },
+  "steps": {
+    "generalInfo": {
+      "title": "Información General",
+      "description": "Define la identidad y contexto de tu simulación"
+    },
+    "roleDefinition": {
+      "title": "Definición de Roles",
+      "description": "Establece los personajes y sus contextos"
+    },
+    "aiPersonality": {
+      "title": "Personalidad de la IA",
+      "description": "Diseña el comportamiento de tu contraparte"
+    },
+    "objectives": {
+      "title": "Objetivos y Metas",
+      "description": "Define cómo se gana y cuándo termina"
+    },
+    "finalReview": {
+      "title": "Revisión Final",
+      "description": "Confirma y publica tu simulación"
+    }
+  },
+  "step": "Paso",
+  "stepDescription": "Descripción del paso"
+}

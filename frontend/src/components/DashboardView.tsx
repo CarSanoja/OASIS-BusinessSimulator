@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Users, TrendingUp, Lightbulb, Clock, Target, BarChart3, Building2, Globe, Search, Filter, Star, Play, BookOpen, Award, Zap, ChevronRight, ArrowRight, Plus, Settings, Sparkles } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
 import { apiService, type Scenario, type CustomSimulation } from "../services/api";
+import { useTranslation } from "react-i18next";
 
 // Remove hardcoded scenarios - will be loaded from API
 
@@ -52,29 +53,6 @@ const learningPaths: LearningPath[] = [
   }
 ];
 
-interface CustomSimulation {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  difficulty: string;
-  skills: string[];
-  userRole: string;
-  aiRole: string;
-  aiPersonality: {
-    analytical: number;
-    patience: number;
-    aggression: number;
-    flexibility: number;
-  };
-  aiObjectives: string[];
-  userObjectives: string[];
-  endConditions: string[];
-  knowledgeBase?: string;
-  isPublished: boolean;
-  createdBy: string;
-  createdAt: Date;
-}
 
 interface DashboardViewProps {
   onStartSimulation: (scenario: any) => void;
@@ -84,7 +62,9 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator, customSimulations }: DashboardViewProps) {
+  const { t } = useTranslation(['dashboard', 'common']);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
   const [activeSection, setActiveSection] = useState<'featured' | 'paths' | 'library'>('featured');
@@ -92,19 +72,47 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
   const [featuredScenarios, setFeaturedScenarios] = useState<Scenario[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCallInProgress, setIsCallInProgress] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Load data from API
   useEffect(() => {
+    // console.log('🔍 DashboardView useEffect triggered:', {
+    //   selectedCategory,
+    //   selectedDifficulty,
+    //   searchTerm,
+    //   debouncedSearchTerm,
+    //   loading,
+    //   isCallInProgress,
+    //   timestamp: new Date().toISOString()
+    // });
+
+    // Prevent multiple simultaneous calls
+    if (isCallInProgress) {
+      // console.log('⏸️ Skipping API call - call already in progress');
+      return;
+    }
+
     const loadData = async () => {
       try {
+        // console.log('📡 Starting API calls...');
+        setIsCallInProgress(true);
         setLoading(true);
         
         // Load scenarios
         const scenariosResponse = await apiService.getScenarios({
           category: selectedCategory,
           difficulty: selectedDifficulty,
-          search: searchTerm
+          search: debouncedSearchTerm
         });
         setScenarios(scenariosResponse.results);
 
@@ -122,14 +130,15 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
         console.error('Error loading dashboard data:', err);
       } finally {
         setLoading(false);
+        setIsCallInProgress(false);
       }
     };
 
     loadData();
-  }, [selectedCategory, selectedDifficulty, searchTerm]);
+  }, [selectedCategory, selectedDifficulty, debouncedSearchTerm]);
 
   const getDifficultyStars = (difficulty: string) => {
-    const stars = difficulty === 'Principiante' ? 1 : difficulty === 'Intermedio' ? 2 : 3;
+    const stars = difficulty === t('dashboard:beginnerLevel') ? 1 : difficulty === t('dashboard:intermediateLevel') ? 2 : 3;
     return Array.from({ length: 3 }, (_, i) => (
       <Star 
         key={i} 
@@ -152,14 +161,14 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
 
   // Filter scenarios (filtering is now done by API, but keep for client-side search)
   const filteredScenarios = scenarios;
-  const difficulties = ['Principiante', 'Intermedio', 'Avanzado'];
+  const difficulties = [t('dashboard:beginnerLevel'), t('dashboard:intermediateLevel'), t('dashboard:advancedLevel')];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-white">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/5 via-purple-600/5 to-cyan-600/5"></div>
-        <div className="relative max-w-7xl mx-auto px-6 py-16">
+        <div className="relative w-full px-4 md:px-6 lg:px-8 xl:px-12 py-16">
           <div className="text-center max-w-4xl mx-auto">
             {/* Brand Header */}
             <div className="flex items-center justify-center gap-4 mb-8">
@@ -173,34 +182,32 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                   OASIS
                 </h1>
-                <p className="text-sm text-gray-600 font-medium">by IESA Business School</p>
               </div>
             </div>
 
             {/* Value Proposition */}
             <div className="space-y-6 mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 leading-tight">
-                Tu Plataforma de
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Empoderamiento del Aprendizaje</span>
+                {t('dashboard:platformTitle', { defaultValue: 'Tu Plataforma de' })}
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> {t('dashboard:learningEmpowerment', { defaultValue: 'Empoderamiento del Aprendizaje' })}</span>
               </h2>
               <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
-                Experimenta el futuro del aprendizaje inmersivo con IA. Desde simulaciones ejecutivas hasta próximos módulos revolucionarios, 
-                OASIS transforma cómo desarrollas habilidades críticas para el éxito profesional.
+                {t('dashboard:platformDescription', { defaultValue: 'Experimenta el futuro del aprendizaje inmersivo con IA. Desde simulaciones ejecutivas hasta próximos módulos revolucionarios, OASIS transforma cómo desarrollas habilidades críticas para el éxito profesional.' })}
               </p>
               
               {/* Preview of upcoming features */}
               <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
                 <Badge className="bg-blue-100 text-blue-800 border-blue-200 px-4 py-2">
-                  🎭 Role-Playing Ejecutivo <span className="ml-1 text-green-600">• Activo</span>
+                  🎭 Role-Playing {t('dashboard:executive', { defaultValue: 'Ejecutivo' })} <span className="ml-1 text-green-600">• {t('dashboard:active', { defaultValue: 'Activo' })}</span>
                 </Badge>
                 <Badge className="bg-gray-100 text-gray-600 border-gray-200 px-4 py-2">
-                  🧠 Coaching Inteligente <span className="ml-1 text-amber-600">• Próximamente</span>
+                  🧠 {t('dashboard:smartCoaching', { defaultValue: 'Coaching Inteligente' })} <span className="ml-1 text-amber-600">• {t('dashboard:comingSoon', { defaultValue: 'Próximamente' })}</span>
                 </Badge>
                 <Badge className="bg-gray-100 text-gray-600 border-gray-200 px-4 py-2">
-                  📈 Análisis Predictivo <span className="ml-1 text-amber-600">• Próximamente</span>
+                  📈 {t('dashboard:predictiveAnalysis', { defaultValue: 'Análisis Predictivo' })} <span className="ml-1 text-amber-600">• {t('dashboard:comingSoon', { defaultValue: 'Próximamente' })}</span>
                 </Badge>
                 <Badge className="bg-gray-100 text-gray-600 border-gray-200 px-4 py-2">
-                  🎯 Skill Assessment <span className="ml-1 text-amber-600">• Próximamente</span>
+                  🎯 {t('dashboard:skillAssessment', { defaultValue: 'Skill Assessment' })} <span className="ml-1 text-amber-600">• {t('dashboard:comingSoon', { defaultValue: 'Próximamente' })}</span>
                 </Badge>
               </div>
             </div>
@@ -213,7 +220,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
               >
                 <Play className="h-5 w-5 mr-2" />
-                Explorar Role-Playing
+                {t('dashboard:exploreRolePlaying', { defaultValue: 'Explorar Role-Playing' })}
               </Button>
               <Button 
                 onClick={onViewProgress}
@@ -222,7 +229,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                 className="border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-4 rounded-xl"
               >
                 <BarChart3 className="h-5 w-5 mr-2" />
-                Mi Dashboard
+                {t('dashboard:myDashboard', { defaultValue: 'Mi Dashboard' })}
               </Button>
             </div>
 
@@ -230,15 +237,15 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
             <div className="flex items-center justify-center gap-8 text-sm text-gray-500">
               <div className="flex items-center gap-2">
                 <Award className="h-4 w-4 text-yellow-500" />
-                <span>+2,500 profesionales empoderados</span>
+                <span>{t('dashboard:professionalsEmpowered', { defaultValue: '+2,500 profesionales empoderados' })}</span>
               </div>
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-blue-500" />
-                <span>Módulo 1: Role-Playing activo</span>
+                <span>{t('dashboard:module1Active', { defaultValue: 'Módulo 1: Role-Playing activo' })}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Zap className="h-4 w-4 text-purple-500" />
-                <span>3 módulos más en desarrollo</span>
+                <span>{t('dashboard:modulesInDevelopment', { count: 3, defaultValue: '3 módulos más en desarrollo' })}</span>
               </div>
             </div>
           </div>
@@ -247,38 +254,38 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
 
       {/* Navigation Tabs */}
       <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 z-40">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between py-4">
-            <nav className="flex gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="w-full px-4 md:px-6 lg:px-8 xl:px-12">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 gap-4">
+            <nav className="flex flex-col sm:flex-row gap-1 bg-gray-100 rounded-lg p-1 w-full sm:w-auto">
               <button
                 onClick={() => setActiveSection('featured')}
-                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                className={`px-3 sm:px-6 py-2 rounded-md font-medium transition-all text-sm sm:text-base ${
                   activeSection === 'featured'
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                🏆 Módulo Destacado
+                🏆 {t('dashboard:featuredModule', { defaultValue: 'Módulo Destacado' })}
               </button>
               <button
                 onClick={() => setActiveSection('paths')}
-                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                className={`px-3 sm:px-6 py-2 rounded-md font-medium transition-all text-sm sm:text-base ${
                   activeSection === 'paths'
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                🎯 Programas Estructurados
+                🎯 {t('dashboard:structuredPrograms', { defaultValue: 'Programas Estructurados' })}
               </button>
               <button
                 onClick={() => setActiveSection('library')}
-                className={`px-6 py-2 rounded-md font-medium transition-all ${
+                className={`px-3 sm:px-6 py-2 rounded-md font-medium transition-all text-sm sm:text-base ${
                   activeSection === 'library'
                     ? 'bg-white text-blue-600 shadow-sm'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                📚 Catálogo Completo
+                📚 {t('dashboard:completeCatalog', { defaultValue: 'Catálogo Completo' })}
               </button>
             </nav>
 
@@ -288,7 +295,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
               className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-medium px-6 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Crear Simulación
+              {t('dashboard:createSimulationButton')}
             </Button>
 
             {activeSection === 'library' && (
@@ -296,7 +303,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <input
-                    placeholder="Buscar simulaciones..."
+                    placeholder={t('dashboard:searchPlaceholder')}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -304,10 +311,10 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                 </div>
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
                   <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Categoría" />
+                    <SelectValue placeholder={t('dashboard:category', { defaultValue: 'Categoría' })} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todas las categorías</SelectItem>
+                    <SelectItem value="all">{t('dashboard:allCategories', { defaultValue: 'Todas las categorías' })}</SelectItem>
                     {categories.map(category => (
                       <SelectItem key={category} value={category}>{category}</SelectItem>
                     ))}
@@ -321,28 +328,27 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
 
       {/* Upcoming Modules Preview */}
       <div className="bg-gradient-to-r from-gray-50 to-blue-50 border-y border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="w-full px-4 md:px-6 lg:px-8 xl:px-12 py-12">
           <div className="text-center mb-8">
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">🚀 El Futuro del Aprendizaje Inmersivo</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">🚀 {t('dashboard:futureOfLearning', { defaultValue: 'El Futuro del Aprendizaje Inmersivo' })}</h3>
             <p className="text-gray-600 max-w-3xl mx-auto">
-              OASIS está revolucionando el desarrollo profesional. Mientras disfrutas nuestro módulo de Role-Playing, 
-              estamos construyendo el futuro del aprendizaje personalizado.
+              {t('dashboard:oasisRevolutionizing', { defaultValue: 'OASIS está revolucionando el desarrollo profesional. Mientras disfrutas nuestro módulo de Role-Playing, estamos construyendo el futuro del aprendizaje personalizado.' })}
             </p>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
               <div className="absolute top-4 right-4">
-                <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">Próximamente</Badge>
+                <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">{t('dashboard:comingSoon', { defaultValue: 'Próximamente' })}</Badge>
               </div>
               <div className="text-3xl mb-4">🧠</div>
-              <h4 className="text-lg font-bold text-gray-900 mb-2">AI Coaching Personalizado</h4>
+              <h4 className="text-lg font-bold text-gray-900 mb-2">{t('dashboard:aiCoachingTitle', { defaultValue: 'AI Coaching Personalizado' })}</h4>
               <p className="text-gray-600 text-sm mb-4">
-                Coach inteligente que adapta el aprendizaje a tu estilo, fortalezas y áreas de oportunidad únicos.
+                {t('dashboard:aiCoachingDesc', { defaultValue: 'Coach inteligente que adapta el aprendizaje a tu estilo, fortalezas y áreas de oportunidad únicos.' })}
               </p>
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
-                <span>En desarrollo activo</span>
+                <span>{t('dashboard:inActiveDevelopment', { defaultValue: 'En desarrollo activo' })}</span>
               </div>
             </div>
             
@@ -351,13 +357,13 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                 <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">Q2 2024</Badge>
               </div>
               <div className="text-3xl mb-4">📊</div>
-              <h4 className="text-lg font-bold text-gray-900 mb-2">Analytics Predictivo</h4>
+              <h4 className="text-lg font-bold text-gray-900 mb-2">{t('dashboard:predictiveAnalyticsTitle', { defaultValue: 'Analytics Predictivo' })}</h4>
               <p className="text-gray-600 text-sm mb-4">
-                Predicciones de rendimiento y recomendaciones de carrera basadas en tu progreso y mercado laboral.
+                {t('dashboard:predictiveAnalyticsDesc', { defaultValue: 'Predicciones de rendimiento y recomendaciones de carrera basadas en tu progreso y mercado laboral.' })}
               </p>
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-                <span>Investigación y diseño</span>
+                <span>{t('dashboard:researchAndDesign', { defaultValue: 'Investigación y diseño' })}</span>
               </div>
             </div>
             
@@ -366,21 +372,21 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                 <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">Q3 2024</Badge>
               </div>
               <div className="text-3xl mb-4">🎯</div>
-              <h4 className="text-lg font-bold text-gray-900 mb-2">Skill Assessment 360°</h4>
+              <h4 className="text-lg font-bold text-gray-900 mb-2">{t('dashboard:skillAssessment360Title', { defaultValue: 'Skill Assessment 360°' })}</h4>
               <p className="text-gray-600 text-sm mb-4">
-                Evaluación comprehensiva de competencias con feedback de pares, superiores y análisis de mercado.
+                {t('dashboard:skillAssessment360Desc', { defaultValue: 'Evaluación comprehensiva de competencias con feedback de pares, superiores y análisis de mercado.' })}
               </p>
               <div className="flex items-center gap-2 text-xs text-gray-500">
                 <div className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></div>
-                <span>Concepto y validación</span>
+                <span>{t('dashboard:conceptAndValidation', { defaultValue: 'Concepto y validación' })}</span>
               </div>
             </div>
           </div>
           
           <div className="text-center mt-8">
             <p className="text-sm text-gray-500">
-              ¿Quieres ser parte del futuro? 
-              <a href="#" className="text-blue-600 hover:text-blue-700 font-medium ml-1">Únete a nuestro programa beta</a>
+              {t('dashboard:wantToBePartOfFuture', { defaultValue: '¿Quieres ser parte del futuro?' })}
+              <a href="#" className="text-blue-600 hover:text-blue-700 font-medium ml-1">{t('dashboard:joinBetaProgram', { defaultValue: 'Únete a nuestro programa beta' })}</a>
             </p>
           </div>
         </div>
@@ -389,18 +395,18 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
       {/* Custom Simulations Section */}
       {customSimulations.length > 0 && (
         <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-y border-purple-200">
-          <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="w-full px-4 md:px-6 lg:px-8 xl:px-12 py-12">
             <div className="text-center mb-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
                 <Sparkles className="h-6 w-6 text-purple-500" />
-                🎨 Tus Simulaciones Personalizadas
+                🎨 {t('dashboard:customSimulations')}
               </h3>
               <p className="text-gray-600 max-w-3xl mx-auto">
-                Experiencias de aprendizaje que creaste para ti y tu equipo
+                {t('dashboard:customSimulationsDesc', { defaultValue: 'Experiencias de aprendizaje que creaste para ti y tu equipo' })}
               </p>
             </div>
             
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {customSimulations.slice(0, 6).map((simulation) => (
                 <div key={simulation.id} className="bg-white rounded-2xl p-6 shadow-sm border border-purple-100 hover:shadow-lg transition-all duration-300 group">
                   <div className="flex items-start justify-between mb-4">
@@ -409,9 +415,9 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                         <Settings className="h-5 w-5 text-white" />
                       </div>
                       <Badge className={`${
-                        simulation.difficulty === 'Principiante' ? 'bg-green-500/20 text-green-700' :
-                        simulation.difficulty === 'Intermedio' ? 'bg-yellow-500/20 text-yellow-700' :
-                        simulation.difficulty === 'Avanzado' ? 'bg-red-500/20 text-red-700' :
+                        simulation.difficulty === t('dashboard:beginnerLevel') ? 'bg-green-500/20 text-green-700' :
+                        simulation.difficulty === t('dashboard:intermediateLevel') ? 'bg-yellow-500/20 text-yellow-700' :
+                        simulation.difficulty === t('dashboard:advancedLevel') ? 'bg-red-500/20 text-red-700' :
                         'bg-purple-500/20 text-purple-700'
                       }`}>
                         {simulation.difficulty}
@@ -422,7 +428,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                         ? 'bg-green-100 text-green-800 border-green-200' 
                         : 'bg-gray-100 text-gray-600 border-gray-200'
                     } text-xs`}>
-                      {simulation.isPublished ? 'Publicado' : 'Borrador'}
+                      {simulation.isPublished ? t('dashboard:published', { defaultValue: 'Publicado' }) : t('dashboard:draft', { defaultValue: 'Borrador' })}
                     </Badge>
                   </div>
                   
@@ -494,15 +500,15 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
       )}
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="w-full px-4 md:px-6 lg:px-8 xl:px-12 py-12">
         {/* Featured Scenarios */}
         {activeSection === 'featured' && (
           <div className="space-y-16">
             {/* Hero Scenario */}
             <section>
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">🔥 Módulo Role-Playing: Escenario de la Semana</h3>
-                <p className="text-gray-600">El primer módulo de OASIS: simulaciones inmersivas para desarrollo de competencias ejecutivas</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('dashboard:rolePlayingWeeklyScenario', { defaultValue: '🔥 Módulo Role-Playing: Escenario de la Semana' })}</h3>
+                <p className="text-gray-600">{t('dashboard:firstModuleDescription', { defaultValue: 'El primer módulo de OASIS: simulaciones inmersivas para desarrollo de competencias ejecutivas' })}</p>
               </div>
               
               <div className="relative bg-gradient-to-r from-red-600 to-pink-600 rounded-3xl overflow-hidden shadow-2xl">
@@ -521,18 +527,17 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                       </div>
                       
                       <h4 className="text-4xl font-bold leading-tight">
-                        Liderazgo en Crisis Corporativa
+                        {t('dashboard:crisisLeadershipTitle', { defaultValue: 'Liderazgo en Crisis Corporativa' })}
                       </h4>
                       
                       <p className="text-xl text-red-100 leading-relaxed">
-                        Una crisis de reputación amenaza la supervivencia de tu empresa. Las acciones cayeron 40%, 
-                        los medios atacan, y tu equipo está en pánico. ¿Cómo lideras en el momento más crítico?
+                        {t('dashboard:crisisScenarioDescription', { defaultValue: 'Una crisis de reputación amenaza la supervivencia de tu empresa. Las acciones cayeron 40%, los medios atacan, y tu equipo está en pánico. ¿Cómo lideras en el momento más crítico?' })}
                       </p>
                       
                       <div className="bg-red-500/20 backdrop-blur-sm rounded-xl p-4 border border-red-300/30">
                         <p className="text-red-100 text-sm">
-                          <strong>Módulo Role-Playing:</strong> Experimenta decisiones de alto impacto en un entorno seguro. 
-                          Cada elección tiene consecuencias reales que afectan el resultado de la simulación.
+                          <strong>{t('dashboard:rolePlayingModule', { defaultValue: 'Módulo Role-Playing' })}:</strong> {t('dashboard:rolePlayingExperience', { defaultValue: 'Experimenta decisiones de alto impacto en un entorno seguro.' })}
+                          {t('dashboard:consequencesDescription', { defaultValue: 'Cada elección tiene consecuencias reales que afectan el resultado de la simulación.' })}
                         </p>
                       </div>
                       
@@ -562,7 +567,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                         disabled={loading || featuredScenarios.length === 0}
                       >
                         <Play className="h-5 w-5 mr-2" />
-                        {loading ? 'Cargando...' : 'Aceptar el Desafío'}
+                        {loading ? t('common:loading') : t('dashboard:acceptChallenge', { defaultValue: 'Aceptar el Desafío' })}
                       </Button>
                     </div>
                     
@@ -582,14 +587,14 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
             {/* Quick Start Cards */}
             <section>
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">⚡ Perfectos para Comenzar</h3>
-                <p className="text-gray-600">Simulaciones ideales para tu primera experiencia de aprendizaje inmersivo</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('dashboard:perfectToStart', { defaultValue: '⚡ Perfectos para Comenzar' })}</h3>
+                <p className="text-gray-600">{t('dashboard:idealSimulationsDescription', { defaultValue: 'Simulaciones ideales para tu primera experiencia de aprendizaje inmersivo' })}</p>
               </div>
               
               {loading ? (
                 <div className="text-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="mt-4 text-gray-600">Cargando simulaciones...</p>
+                  <p className="mt-4 text-gray-600">{t('dashboard:loadingScenarios')}</p>
                 </div>
               ) : error ? (
                 <div className="text-center py-12">
@@ -663,7 +668,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
             <div className="text-center">
               <h3 className="text-3xl font-bold text-gray-900 mb-4">🎯 Programas de Desarrollo Estructurados</h3>
               <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                Rutas de aprendizaje diseñadas por expertos del IESA que combinan múltiples simulaciones 
+                Rutas de aprendizaje diseñadas por expertos que combinan múltiples simulaciones 
                 para el desarrollo integral de competencias profesionales críticas.
               </p>
               
@@ -753,7 +758,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
         {activeSection === 'library' && (
           <div className="space-y-8">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">📚 Catálogo del Módulo Role-Playing</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">{t('dashboard:rolePlayingCatalog', { defaultValue: '📚 Catálogo del Módulo Role-Playing' })}</h3>
               <p className="text-gray-600">
                 {filteredScenarios.length === scenarios.length 
                   ? `${scenarios.length} simulaciones ejecutivas disponibles en nuestro primer módulo`
@@ -783,7 +788,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                 </Button>
               </div>
             ) : (
-              <div className="grid lg:grid-cols-2 gap-8">
+              <div className="grid lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
                 {filteredScenarios.map((scenario, index) => (
                   <div key={scenario.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 group">
                     <div className="relative h-48 overflow-hidden">

@@ -6,12 +6,12 @@ import { Textarea } from "./ui/textarea";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
 import { Progress } from "./ui/progress";
-import { 
-  ArrowLeft, 
-  Send, 
-  Target, 
-  User, 
-  Bot, 
+import {
+  ArrowLeft,
+  Send,
+  Target,
+  User,
+  Bot,
   AlertCircle,
   CheckCircle2,
   Timer,
@@ -23,17 +23,17 @@ import {
   Users,
   BookOpen
 } from "lucide-react";
-import { apiService, type Message, type Simulation } from "../services/api";
+import { apiService, type Message as ApiMessage, type Simulation as ApiSimulation, type Scenario as ApiScenario } from "../services/api";
+import { LiveMetricsPanel } from "./LiveMetricsPanel";
+import { DeepAnalyticsModal } from "./DeepAnalyticsModal";
+import { useTranslation } from "react-i18next";
 
-interface Message {
-  id: string;
-  sender: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-  emotion?: string;
-}
+// Use API types directly
+type Message = ApiMessage;
+type Simulation = ApiSimulation;
+type Scenario = ApiScenario;
 
-interface Scenario {
+interface LocalScenario {
   id: string;
   title: string;
   category: string;
@@ -43,15 +43,17 @@ interface Scenario {
   participants: string;
   objectives: string[];
   skills: string[];
+  is_featured: boolean;
 }
 
 interface SimulationViewProps {
-  scenario: Scenario;
+  scenario: LocalScenario;
   onEndSimulation: (messages: Message[], duration: number) => void;
   onBackToDashboard: () => void;
 }
 
 export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }: SimulationViewProps) {
+  const { t } = useTranslation(['simulation', 'common']);
   console.log('SimulationView rendering with scenario:', scenario);
   
   const [messages, setMessages] = useState<Message[]>([]);
@@ -65,6 +67,8 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   const [simulation, setSimulation] = useState<Simulation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [isDeepAnalyticsOpen, setIsDeepAnalyticsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Update current time every minute
@@ -86,14 +90,74 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
       try {
         console.log('Initializing simulation for scenario:', scenario);
         setLoading(true);
-        
-        // Create simulation
+
+        // Check if there's an existing active simulation for this scenario
+        const storedSimulationId = localStorage.getItem(`simulation_${scenario.id}`);
+
+        if (storedSimulationId) {
+          console.log('Found existing simulation ID:', storedSimulationId);
+
+          // Try to get existing simulation and messages
+          try {
+            setLoadingMessages(true);
+
+            // Create simulation object from stored ID
+            const existingSimulation: Simulation = {
+              id: parseInt(storedSimulationId),
+              scenario: parseInt(scenario.id),
+              custom_simulation: null,
+              status: 'active',
+              started_at: new Date().toISOString()
+            };
+            setSimulation(existingSimulation);
+
+            // Fetch existing messages
+            const messagesResponse = await apiService.getMessages(parseInt(storedSimulationId));
+            console.log('Fetched existing messages:', messagesResponse);
+
+            if (messagesResponse.results && messagesResponse.results.length > 0) {
+              // Convert API messages to our format
+              const convertedMessages: Message[] = messagesResponse.results.map((msg: any) => ({
+                id: msg.id.toString(),
+                sender: msg.sender,
+                content: msg.content,
+                timestamp: new Date(msg.timestamp),
+                emotion: msg.emotion
+              }));
+              setMessages(convertedMessages.reverse());
+            } else {
+              // No messages, add welcome message
+              const welcomeMessage: Message = {
+                id: '1',
+                sender: 'ai',
+                content: getWelcomeMessage(scenario),
+                timestamp: new Date(),
+                emotion: 'neutral'
+              };
+              setMessages([welcomeMessage]);
+            }
+
+            setError(null);
+            setLoadingMessages(false);
+            console.log('Resumed existing simulation successfully');
+            return;
+          } catch (err) {
+            console.error('Error loading existing simulation, creating new one:', err);
+            localStorage.removeItem(`simulation_${scenario.id}`);
+            setLoadingMessages(false);
+          }
+        }
+
+        // Create new simulation
         const newSimulation = await apiService.createSimulation({
           scenario: parseInt(scenario.id)
         });
         console.log('Created simulation:', newSimulation);
         setSimulation(newSimulation);
-        
+
+        // Store simulation ID
+        localStorage.setItem(`simulation_${scenario.id}`, newSimulation.id.toString());
+
         // Add welcome message
         const welcomeMessage: Message = {
           id: '1',
@@ -104,7 +168,7 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
         };
         console.log('Setting welcome message:', welcomeMessage);
         setMessages([welcomeMessage]);
-        
+
         setError(null);
         console.log('Simulation initialized successfully');
       } catch (err) {
@@ -266,7 +330,7 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
       const errorMessage: Message = {
         id: Date.now().toString(),
         sender: 'ai',
-        content: 'Disculpe, hubo un problema técnico. ¿Podría repetir su mensaje?',
+        content: t('simulation:technicalError', { defaultValue: 'Disculpe, hubo un problema técnico. ¿Podría repetir su mensaje?' }),
         timestamp: new Date(),
         emotion: 'neutral'
       };
@@ -278,19 +342,26 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
 
   const handleEndSimulation = async () => {
     if (!simulation) return;
-    
+
     try {
       const duration = Math.round((currentTime.getTime() - startTime.getTime()) / 1000 / 60);
-      
+
       // End simulation via API
       const result = await apiService.endSimulation(simulation.id);
-      
+
+      // Clear stored simulation ID
+      localStorage.removeItem(`simulation_${scenario.id}`);
+
       // Pass the analysis data to the feedback view
       onEndSimulation(messages, duration);
     } catch (err) {
       console.error('Error ending simulation:', err);
       // Still proceed to feedback view even if API call fails
       const duration = Math.round((currentTime.getTime() - startTime.getTime()) / 1000 / 60);
+
+      // Clear stored simulation ID
+      localStorage.removeItem(`simulation_${scenario.id}`);
+
       onEndSimulation(messages, duration);
     }
   };
@@ -305,33 +376,33 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   };
 
   const getToneColor = (tone: number) => {
-    if (tone >= 70) return 'text-green-400';
-    if (tone >= 40) return 'text-blue-400';
-    return 'text-red-400';
+    if (tone >= 70) return 'text-green-600';
+    if (tone >= 40) return 'text-blue-600';
+    return 'text-red-600';
   };
 
   const getToneBgColor = (tone: number) => {
-    if (tone >= 70) return 'bg-green-500/20';
-    if (tone >= 40) return 'bg-blue-500/20';
-    return 'bg-red-500/20';
+    if (tone >= 70) return 'bg-green-100';
+    if (tone >= 40) return 'bg-blue-100';
+    return 'bg-red-100';
   };
 
   const getStrategicColor = (alignment: number) => {
-    if (alignment >= 80) return 'text-emerald-400';
-    if (alignment >= 60) return 'text-yellow-400';
-    return 'text-orange-400';
+    if (alignment >= 80) return 'text-emerald-600';
+    if (alignment >= 60) return 'text-yellow-600';
+    return 'text-orange-600';
   };
 
-  console.log('Render state:', { loading, error, messages: messages.length, simulation: !!simulation });
+  console.log('Render state:', { loading, loadingMessages, error, messages: messages.length, simulation: !!simulation });
 
-  if (loading) {
+  if (loading || loadingMessages) {
     console.log('Rendering loading state');
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <div className="text-center text-white">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white mx-auto mb-4"></div>
-          <h3 className="text-xl font-semibold mb-2">Iniciando Simulación</h3>
-          <p className="text-white/70">Preparando entorno de aprendizaje...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <h3 className="text-xl font-semibold mb-2 text-gray-900">{t('simulation:loadingSimulation')}</h3>
+          <p className="text-gray-600">{t('simulation:preparingWorkspace', { defaultValue: 'Preparando mesa de trabajo empresarial...' })}</p>
         </div>
       </div>
     );
@@ -340,12 +411,12 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   if (error) {
     console.log('Rendering error state:', error);
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <div className="text-center text-white">
-          <h3 className="text-xl font-semibold mb-2 text-red-300">Error al Iniciar Simulación</h3>
-          <p className="text-white/70 mb-4">{error}</p>
-          <Button onClick={onBackToDashboard} className="bg-white text-gray-900 hover:bg-gray-100">
-            Volver al Dashboard
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="text-center">
+          <h3 className="text-xl font-semibold mb-2 text-red-600">{t('simulation:errorLoadingSimulation')}</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <Button onClick={onBackToDashboard} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700">
+            {t('simulation:backToDashboard')}
           </Button>
         </div>
       </div>
@@ -355,271 +426,117 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   console.log('Rendering main simulation view');
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ minHeight: 'calc(100vh - 80px)' }}>
-      {/* Animated background - Same as Landing Page */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40"></div>
-        
-        {/* Animated particles - Same pattern as Landing Page */}
-        <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-cyan-400 rounded-full animate-ping opacity-60"></div>
-        <div className="absolute top-1/6 right-1/3 w-1 h-1 bg-pink-400 rounded-full animate-ping opacity-40" style={{animationDelay: '1s'}}></div>
-        <div className="absolute bottom-1/4 left-1/6 w-1.5 h-1.5 bg-blue-400 rounded-full animate-ping opacity-50" style={{animationDelay: '2s'}}></div>
-        <div className="absolute top-3/4 right-1/4 w-1 h-1 bg-purple-400 rounded-full animate-ping opacity-60" style={{animationDelay: '3s'}}></div>
-        <div className="absolute bottom-1/3 right-1/5 w-2 h-2 bg-emerald-400 rounded-full animate-ping opacity-30" style={{animationDelay: '4s'}}></div>
-      </div>
-
-      <div className="relative z-10 flex min-h-full">
-        {/* Left Sidebar - Context Panel */}
-        <div className="w-80 glass-card border-r border-white/10 p-6 flex flex-col">
-          {/* Header */}
-          <div className="flex items-center gap-3 mb-6">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={onBackToDashboard}
-              className="glass-card text-white hover:bg-white/20 border border-white/20"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <div className="flex items-center gap-2">
-                <Play className="h-5 w-5 text-cyan-400" />
-                <span className="text-white font-semibold">Simulación Activa</span>
-              </div>
-              <p className="text-white/70 text-sm">{scenario.category}</p>
-            </div>
+    <div className="h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden">
+      <div className="flex h-full">
+        {/* Live Metrics Panel */}
+        {simulation && (
+          <div className="hidden md:block">
+            <LiveMetricsPanel
+              simulationId={simulation.id}
+              onViewDeepAnalytics={() => setIsDeepAnalyticsOpen(true)}
+              onRefresh={() => {
+                // Force refresh by remounting the component
+                setError(null);
+              }}
+            />
           </div>
+        )}
 
-          {/* Scenario Info Card */}
-          <div className="glass-card p-6 rounded-2xl mb-6 border border-white/20">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-xl flex items-center justify-center">
-                <Target className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-white font-semibold">{scenario.title}</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <Timer className="h-4 w-4 text-cyan-400" />
-                  <span className="text-white/70 text-sm">{getElapsedTime()}</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between mb-4">
-              <Badge className={`${
-                scenario.difficulty === 'Principiante' ? 'bg-green-500/20 text-green-300 border-green-400/30' :
-                scenario.difficulty === 'Intermedio' ? 'bg-yellow-500/20 text-yellow-300 border-yellow-400/30' :
-                'bg-red-500/20 text-red-300 border-red-400/30'
-              }`}>
-                {scenario.difficulty}
-              </Badge>
-              <div className="flex items-center gap-2 text-white/70 text-sm">
-                <Users className="h-4 w-4" />
-                <span>{scenario.participants}</span>
-              </div>
-            </div>
-
-            <Separator className="bg-white/20 mb-4" />
-
-            {/* Objectives Progress */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Target className="h-4 w-4 text-cyan-400" />
-                <span className="text-white font-medium">Objetivos de Misión</span>
-              </div>
-              <div className="space-y-2">
-                {scenario.objectives.map((objective, index) => (
-                  <div key={index} className="flex items-start gap-3 text-sm">
-                    {objectiveProgress[objective] ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-white/40 mt-0.5 flex-shrink-0" />
-                    )}
-                    <span className={`${
-                      objectiveProgress[objective] 
-                        ? 'text-green-300 line-through' 
-                        : 'text-white/90'
-                    }`}>
-                      {objective}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="mt-4">
-                <div className="flex justify-between text-xs text-white/70 mb-2">
-                  <span>Progreso de Misión</span>
-                  <span>{getCompletedObjectives()}/{scenario.objectives.length}</span>
-                </div>
-                <Progress 
-                  value={(getCompletedObjectives() / scenario.objectives.length) * 100} 
-                  className="h-2 bg-white/20"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Analytics Cards */}
-          <div className="space-y-4 mb-6">
-            <div className="glass-card p-4 rounded-2xl border border-white/20">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Thermometer className="h-4 w-4 text-pink-400" />
-                  <span className="text-white text-sm">Tono Emocional</span>
-                </div>
-                <span className={`font-semibold ${getToneColor(emotionalTone)}`}>
-                  {Math.round(emotionalTone)}%
-                </span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    emotionalTone >= 70 ? 'bg-green-400' :
-                    emotionalTone >= 40 ? 'bg-blue-400' : 'bg-red-400'
-                  }`}
-                  style={{ width: `${emotionalTone}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div className="glass-card p-4 rounded-2xl border border-white/20">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-emerald-400" />
-                  <span className="text-white text-sm">Alineación Estratégica</span>
-                </div>
-                <span className={`font-semibold ${getStrategicColor(strategicAlignment)}`}>
-                  {Math.round(strategicAlignment)}%
-                </span>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-2">
-                <div 
-                  className={`h-2 rounded-full transition-all duration-300 ${
-                    strategicAlignment >= 80 ? 'bg-emerald-400' :
-                    strategicAlignment >= 60 ? 'bg-yellow-400' : 'bg-orange-400'
-                  }`}
-                  style={{ width: `${strategicAlignment}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Resources */}
-          <div className="glass-card p-4 rounded-2xl border border-white/20 mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <FileText className="h-4 w-4 text-purple-400" />
-              <span className="text-white font-medium">Recursos Disponibles</span>
-            </div>
-            <div className="space-y-2">
-              <div className="glass-card p-3 rounded-xl border-l-4 border-blue-400">
-                <span className="text-white text-sm">Datos Financieros Q4</span>
-              </div>
-              <div className="glass-card p-3 rounded-xl border-l-4 border-green-400">
-                <span className="text-white text-sm">Análisis de Mercado</span>
-              </div>
-              <div className="glass-card p-3 rounded-xl border-l-4 border-purple-400">
-                <span className="text-white text-sm">Marco Regulatorio</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Skills */}
-          <div className="glass-card p-4 rounded-2xl border border-white/20">
-            <div className="flex items-center gap-2 mb-3">
-              <BookOpen className="h-4 w-4 text-cyan-400" />
-              <span className="text-white font-medium">Competencias</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {scenario.skills.map((skill) => (
-                <Badge 
-                  key={skill} 
-                  className="glass-card text-white border-white/20 text-xs"
-                >
-                  {skill}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Main Chat Area */}
-        <div className="flex-1 flex flex-col">
-          {/* Chat Header */}
-          <div className="glass-card border-b border-white/10 p-6 m-4 rounded-2xl">
+        {/* Executive Communication Center */}
+        <div className="flex-1 flex flex-col bg-white min-w-0">
+          {/* Professional Header */}
+          <div className="border-b border-gray-200 p-3 lg:p-6 bg-white shadow-sm flex-shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <Bot className="h-6 w-6 text-white" />
+              <div className="flex items-center gap-3 lg:gap-4 min-w-0">
+                <div className="md:hidden">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onBackToDashboard}
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
                 </div>
-                <div>
-                  <h3 className="text-white font-semibold">Simulación Empresarial</h3>
-                  <p className="text-white/70 text-sm">{scenario.participants}</p>
+                <div className="w-8 h-8 lg:w-12 lg:h-12 bg-gradient-to-br from-slate-600 to-gray-700 rounded-xl flex items-center justify-center">
+                  <Bot className="h-4 w-4 lg:h-6 lg:w-6 text-white" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base lg:text-xl font-bold text-gray-900">{t('simulation:executiveTable', { defaultValue: 'Mesa Ejecutiva' })}</h3>
+                  <p className="text-gray-600 text-xs lg:text-sm truncate">{scenario.participants}</p>
                 </div>
               </div>
-              <Button 
+              <Button
                 onClick={handleEndSimulation}
-                className="bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-4 lg:px-6 py-2 lg:py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm lg:text-base"
               >
-                Finalizar Simulación
+                <span className="hidden sm:inline">{t('simulation:endSimulation')}</span>
+                <span className="sm:hidden">{t('common:close')}</span>
               </Button>
             </div>
           </div>
 
-          {/* Messages */}
-          <ScrollArea className="flex-1 px-6">
-            <div className="space-y-6 max-w-4xl mx-auto pb-6">
+          {/* Executive Conversation */}
+          <ScrollArea className="flex-1 px-3 lg:px-6 py-3 lg:py-6">
+            <div className="space-y-4 lg:space-y-6 max-w-4xl mx-auto">
               {messages.map((message, index) => (
-                <div 
-                  key={message.id} 
-                  className={`flex gap-4 ${message.sender === 'user' ? 'justify-end' : ''}`}
+                <div
+                  key={message.id}
+                  className={`flex gap-2 lg:gap-4 ${message.sender === 'user' ? 'justify-end' : ''}`}
                 >
                   {message.sender === 'ai' && (
-                    <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Bot className="h-5 w-5 text-white" />
+                    <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-slate-600 to-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Bot className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
                     </div>
                   )}
-                  
-                  <div className={`max-w-3xl ${message.sender === 'user' ? 'order-first' : ''}`}>
-                    <div className={`p-6 rounded-2xl ${
-                      message.sender === 'user' 
-                        ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white ml-auto' 
-                        : 'glass-card text-white border border-white/20'
+
+                  <div className={`max-w-xs lg:max-w-2xl ${message.sender === 'user' ? 'order-first' : ''}`}>
+                    <div className={`p-3 lg:p-6 rounded-xl lg:rounded-2xl shadow-sm border ${
+                      message.sender === 'user'
+                        ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white border-blue-200 ml-auto'
+                        : 'bg-gray-50 text-gray-900 border-gray-200'
                     }`}>
-                      <p className="leading-relaxed">{message.content}</p>
+                      <p className="leading-relaxed text-xs lg:text-sm">{message.content}</p>
                       {message.emotion && message.sender === 'ai' && (
-                        <div className="mt-3 flex items-center gap-2">
-                          <Activity className="h-4 w-4 text-cyan-400" />
-                          <Badge className="glass-card text-white border-white/20 text-xs">
+                        <div className="mt-2 lg:mt-4 flex items-center gap-2">
+                          <Activity className="h-3 w-3 lg:h-4 lg:w-4 text-blue-600" />
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
                             {message.emotion}
                           </Badge>
                         </div>
                       )}
                     </div>
-                    <p className="text-xs text-white/60 mt-2 px-6">
-                      {message.timestamp.toLocaleTimeString()} • {message.sender === 'user' ? 'Tú' : 'Contraparte'}
-                    </p>
+                    <div className={`text-xs mt-1 lg:mt-2 px-2 lg:px-4 ${
+                      message.sender === 'user' ? 'text-right text-gray-500' : 'text-gray-500'
+                    }`}>
+                      <span>{message.timestamp.toLocaleTimeString()}</span>
+                      <span className="ml-1">•</span>
+                      <span className="ml-1 font-medium">
+                        {message.sender === 'user' ? t('simulation:you', { defaultValue: 'Usted' }) : t('simulation:executive', { defaultValue: 'Ejecutivo' })}
+                      </span>
+                    </div>
                   </div>
 
                   {message.sender === 'user' && (
-                    <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <User className="h-5 w-5 text-white" />
+                    <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <User className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
                     </div>
                   )}
                 </div>
               ))}
               
               {isAiTyping && (
-                <div className="flex gap-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <Bot className="h-5 w-5 text-white" />
+                <div className="flex gap-2 lg:gap-4">
+                  <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-slate-600 to-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Bot className="h-4 w-4 lg:h-5 lg:w-5 text-white" />
                   </div>
-                  <div className="glass-card p-6 rounded-2xl border border-white/20">
-                    <div className="flex space-x-2">
-                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-pink-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                      <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                  <div className="bg-gray-50 p-3 lg:p-6 rounded-xl lg:rounded-2xl border border-gray-200 shadow-sm max-w-xs lg:max-w-2xl">
+                    <div className="flex space-x-2 mb-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                      <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                     </div>
-                    <p className="text-white/60 text-sm mt-2">Analizando tu estrategia...</p>
+                    <p className="text-gray-600 text-xs lg:text-sm">{t('simulation:thinking')}</p>
                   </div>
                 </div>
               )}
@@ -627,16 +544,16 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
             </div>
           </ScrollArea>
 
-          {/* Message Input */}
-          <div className="p-6">
+          {/* Executive Input Panel */}
+          <div className="p-3 lg:p-6 border-t border-gray-200 bg-gray-50 flex-shrink-0">
             <div className="max-w-4xl mx-auto">
-              <div className="glass-card p-4 rounded-2xl border border-white/20">
-                <div className="flex gap-4">
+              <div className="bg-white rounded-xl lg:rounded-2xl border border-gray-200 shadow-lg p-3 lg:p-4">
+                <div className="flex gap-2 lg:gap-4">
                   <Textarea
                     value={currentMessage}
                     onChange={(e) => setCurrentMessage(e.target.value)}
-                    placeholder="Escribe tu respuesta estratégica..."
-                    className="flex-1 min-h-[60px] resize-none bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:ring-2 focus:ring-cyan-400 focus:border-transparent"
+                    placeholder={t('simulation:typePlaceholder')}
+                    className="flex-1 min-h-[40px] lg:min-h-[60px] resize-none bg-gray-50 border border-gray-200 rounded-lg lg:rounded-xl text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm lg:text-base"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -645,10 +562,10 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
                     }}
                     disabled={isAiTyping}
                   />
-                  <Button 
-                    onClick={handleSendMessage} 
+                  <Button
+                    onClick={handleSendMessage}
                     disabled={!currentMessage.trim() || isAiTyping}
-                    className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white self-end"
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white self-end px-4 lg:px-6 py-2 lg:py-3 rounded-lg lg:rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     <Send className="h-4 w-4" />
                   </Button>
@@ -658,6 +575,15 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
           </div>
         </div>
       </div>
+
+      {/* Deep Analytics Modal */}
+      {simulation && (
+        <DeepAnalyticsModal
+          simulationId={simulation.id}
+          isOpen={isDeepAnalyticsOpen}
+          onClose={() => setIsDeepAnalyticsOpen(false)}
+        />
+      )}
     </div>
   );
 }

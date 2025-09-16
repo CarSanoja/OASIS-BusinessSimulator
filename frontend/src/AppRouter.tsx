@@ -3,61 +3,20 @@ import { Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { Header } from './components/Header';
 import { LandingPage } from './components/LandingPage';
 import { DashboardView } from './components/DashboardView';
-import { SimulationView as SimulationViewFixed } from './components/SimulationViewFixed';
+import { SimulationView } from './components/SimulationView';
 import { FeedbackView } from './components/FeedbackView';
 import { ProgressView } from './components/ProgressView';
 import { CreatorView } from './components/CreatorView';
-import { apiService } from './services/api';
+import { ScenarioHistoryView } from './components/ScenarioHistoryView';
+import { apiService, type Scenario as ApiScenario, type CustomSimulation as ApiCustomSimulation, type UserData as ApiUserData, type Simulation as ApiSimulation } from './services/api';
 
-interface Scenario {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  difficulty: string;
-  duration: string;
-  participants: string;
-  objectives: string[];
-  skills: string[];
-  image_url: string;
-  is_featured: boolean;
-  created_at: string;
-  updated_at: string;
-  image: string;
-}
+// Use API types directly
+type Scenario = ApiScenario;
+type CustomSimulation = ApiCustomSimulation;
+type UserData = ApiUserData;
+type Simulation = ApiSimulation;
 
-interface Simulation {
-  id: number;
-  scenario: number;
-  custom_simulation: number | null;
-  status: string;
-  started_at: string;
-}
-
-interface UserData {
-  id: number;
-  name: string;
-}
-
-interface CustomSimulation {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  difficulty: string;
-  skills: string[];
-  user_role: string;
-  ai_role: string;
-  ai_personality: Record<string, number>;
-  ai_objectives: string[];
-  user_objectives: string[];
-  end_conditions: string[];
-  knowledge_base: string;
-  is_published: boolean;
-  createdAt: Date;
-}
-
-type AppState = 'landing' | 'dashboard' | 'simulation' | 'feedback' | 'progress' | 'creator';
+type AppState = 'landing' | 'dashboard' | 'simulation' | 'feedback' | 'progress' | 'creator' | 'scenario-history';
 
 export default function AppRouter() {
   const [user, setUser] = useState<UserData | null>(null);
@@ -67,7 +26,41 @@ export default function AppRouter() {
   const [customSimulations, setCustomSimulations] = useState<CustomSimulation[]>([]);
   const [activeSimulation, setActiveSimulation] = useState<Simulation | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSimulationId, setSelectedSimulationId] = useState<number | null>(null);
+  const [scenariosCache, setScenariosCache] = useState<Scenario[]>([]);
+  const [isLoadingScenarios, setIsLoadingScenarios] = useState(false);
   const navigate = useNavigate();
+
+  // Helper function to load scenarios with cache
+  const loadScenariosWithCache = async (): Promise<Scenario[]> => {
+    // Return cache if available
+    if (scenariosCache.length > 0) {
+      return scenariosCache;
+    }
+
+    // Prevent multiple simultaneous calls
+    if (isLoadingScenarios) {
+      return [];
+    }
+
+    try {
+      setIsLoadingScenarios(true);
+      const scenariosResponse = await apiService.getScenarios();
+      setScenariosCache(scenariosResponse.results);
+      return scenariosResponse.results;
+    } catch (error) {
+      console.error('Error loading scenarios:', error);
+      return [];
+    } finally {
+      setIsLoadingScenarios(false);
+    }
+  };
+
+  // Helper function to find scenario by ID
+  const findScenarioById = async (scenarioId: string): Promise<Scenario | null> => {
+    const scenarios = await loadScenariosWithCache();
+    return scenarios.find(s => s.id.toString() === scenarioId) || null;
+  };
 
   // Check for existing session on app load
   useEffect(() => {
@@ -98,39 +91,36 @@ export default function AppRouter() {
     navigate('/dashboard');
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setCurrentView('landing');
-    setSelectedScenario(null);
-    setSimulationData(null);
-    setCustomSimulations([]);
-    localStorage.removeItem('oasis-user');
-    localStorage.removeItem('userData');
-    localStorage.removeItem('user');
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refreshToken');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      // Clear API service token first
+      apiService.setToken('');
+
+      // Call server logout
+      await apiService.logout();
+    } catch (error) {
+      console.warn('Server logout failed, proceeding with local logout:', error);
+    } finally {
+      // Always clear local state
+      setUser(null);
+      setCurrentView('landing');
+      setSelectedScenario(null);
+      setSimulationData(null);
+      setCustomSimulations([]);
+      localStorage.removeItem('oasis-user');
+      localStorage.removeItem('userData');
+      localStorage.removeItem('user');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refreshToken');
+      navigate('/');
+    }
   };
 
   const handleStartSimulation = async (scenario: Scenario) => {
     console.log('Starting simulation for scenario:', scenario);
     setSelectedScenario(scenario);
-    setCurrentView('simulation');
-    
-    try {
-      // Create simulation in the router
-      const newSimulation = await apiService.createSimulation({
-        scenario: parseInt(scenario.id)
-      });
-      console.log('Simulation created in router:', newSimulation);
-      setActiveSimulation(newSimulation);
-      
-      navigate(`/simulation/${scenario.id}`);
-    } catch (err) {
-      console.error('Error creating simulation:', err);
-      setError(err instanceof Error ? err.message : 'Error creating simulation');
-    }
+    navigate(`/scenario/${scenario.id}/history`);
   };
 
   const handleEndSimulation = (messages: any[], duration: number) => {
@@ -149,6 +139,46 @@ export default function AppRouter() {
   const handleViewProgress = () => {
     setCurrentView('progress');
     navigate('/progress');
+  };
+
+  const handleStartScenarioFromId = async (scenarioId: string) => {
+    try {
+      const scenario = await findScenarioById(scenarioId);
+      if (scenario) {
+        await handleStartSimulation(scenario);
+      }
+    } catch (error) {
+      console.error('Error loading scenario:', error);
+    }
+  };
+
+  const handleSelectSimulation = (simulationId: number) => {
+    setSelectedSimulationId(simulationId);
+    setCurrentView('simulation');
+    if (selectedScenario) {
+      navigate(`/simulation/${selectedScenario.id}`);
+    }
+  };
+
+  const handleCreateNewSimulation = async () => {
+    if (selectedScenario) {
+      setSelectedSimulationId(null);
+      setCurrentView('simulation');
+
+      try {
+        // Create simulation
+        const newSimulation = await apiService.createSimulation({
+          scenario: parseInt(selectedScenario.id)
+        });
+        console.log('Simulation created:', newSimulation);
+        setActiveSimulation(newSimulation);
+
+        navigate(`/simulation/${selectedScenario.id}`);
+      } catch (err) {
+        console.error('Error creating simulation:', err);
+        setError(err instanceof Error ? err.message : 'Error creating simulation');
+      }
+    }
   };
 
   const handleViewCreator = () => {
@@ -200,6 +230,7 @@ export default function AppRouter() {
         </div>
       } />
       
+      <Route path="/scenario/:scenarioId/history" element={<ScenarioHistoryRoute />} />
       <Route path="/simulation/:scenarioId" element={<SimulationRoute />} />
       <Route path="/feedback/:scenarioId" element={<FeedbackRoute />} />
       <Route path="/progress" element={<ProgressRoute />} />
@@ -208,6 +239,52 @@ export default function AppRouter() {
   );
 
   // Route components
+  function ScenarioHistoryRoute() {
+    const { scenarioId } = useParams<{ scenarioId: string }>();
+
+    useEffect(() => {
+      // If we don't have the selected scenario, load it
+      if (!selectedScenario || selectedScenario.id.toString() !== scenarioId) {
+        const loadScenario = async () => {
+          try {
+            const scenario = await findScenarioById(scenarioId!);
+            if (scenario) {
+              setSelectedScenario(scenario);
+            } else {
+              console.error('Scenario not found:', scenarioId);
+              navigate('/dashboard');
+            }
+          } catch (error) {
+            console.error('Error loading scenario:', error);
+            navigate('/dashboard');
+          }
+        };
+
+        loadScenario();
+      }
+    }, [scenarioId, navigate, selectedScenario]);
+
+    if (!selectedScenario) {
+      return (
+        <div className="h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex items-center justify-center">
+          <div className="text-white text-lg">Cargando historial...</div>
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        <Header user={user!} onLogout={handleLogout} currentView="dashboard" />
+        <ScenarioHistoryView
+          scenario={selectedScenario}
+          onSelectSimulation={handleSelectSimulation}
+          onCreateNewSimulation={handleCreateNewSimulation}
+          onBackToDashboard={handleBackToDashboard}
+        />
+      </div>
+    );
+  }
+
   function SimulationRoute() {
     const { scenarioId } = useParams<{ scenarioId: string }>();
     
@@ -226,8 +303,7 @@ export default function AppRouter() {
         });
         const loadScenario = async () => {
           try {
-            const scenarios = await apiService.getScenarios();
-            const scenario = scenarios.find(s => s.id.toString() === scenarioId);
+            const scenario = await findScenarioById(scenarioId!);
             if (scenario) {
               console.log('Found scenario:', scenario);
               setSelectedScenario(scenario);
@@ -258,11 +334,10 @@ export default function AppRouter() {
     return (
       <div>
         <Header user={user!} onLogout={handleLogout} currentView="simulation" />
-        <SimulationViewFixed
-          scenario={selectedScenario}
-          simulation={activeSimulation}
+        <SimulationView
+          scenario={{...selectedScenario, is_featured: selectedScenario.is_featured || false}}
           onEndSimulation={handleEndSimulation}
-          onBackToDashboard={handleBackToDashboard}
+          onBackToDashboard={() => navigate(`/scenario/${selectedScenario.id}/history`)}
         />
       </div>
     );
@@ -275,8 +350,7 @@ export default function AppRouter() {
       // Load scenario data based on scenarioId
       const loadScenario = async () => {
         try {
-          const scenarios = await apiService.getScenarios();
-          const scenario = scenarios.find(s => s.id.toString() === scenarioId);
+          const scenario = await findScenarioById(scenarioId!);
           if (scenario) {
             setSelectedScenario(scenario);
           }
@@ -313,7 +387,7 @@ export default function AppRouter() {
         <Header user={user!} onLogout={handleLogout} currentView="progress" />
         <ProgressView
           onBackToDashboard={handleBackToDashboard}
-          onStartScenario={handleStartSimulation}
+          onStartScenario={handleStartScenarioFromId}
         />
       </div>
     );

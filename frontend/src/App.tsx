@@ -8,6 +8,7 @@ import { SimulationView as SimulationViewFixed } from './components/SimulationVi
 import { FeedbackView } from './components/FeedbackView';
 import { ProgressView } from './components/ProgressView';
 import { CreatorView } from './components/CreatorView';
+import { ScenarioHistoryView } from './components/ScenarioHistoryView';
 import { apiService } from './services/api';
 
 interface Scenario {
@@ -20,6 +21,7 @@ interface Scenario {
   participants: string;
   objectives: string[];
   skills: string[];
+  is_featured: boolean;
 }
 
 interface Message {
@@ -59,7 +61,7 @@ interface CustomSimulation {
   createdAt: Date;
 }
 
-type AppState = 'landing' | 'dashboard' | 'simulation' | 'feedback' | 'progress' | 'creator';
+type AppState = 'landing' | 'dashboard' | 'simulation' | 'feedback' | 'progress' | 'creator' | 'scenario-history';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppState>('landing');
@@ -70,6 +72,7 @@ export default function App() {
     duration: number;
   } | null>(null);
   const [customSimulations, setCustomSimulations] = useState<CustomSimulation[]>([]);
+  const [selectedSimulationId, setSelectedSimulationId] = useState<number | null>(null);
 
   // Check for existing session on app load
   useEffect(() => {
@@ -123,6 +126,16 @@ export default function App() {
 
   const handleStartSimulation = (scenario: Scenario) => {
     setSelectedScenario(scenario);
+    setCurrentView('scenario-history');
+  };
+
+  const handleSelectSimulation = (simulationId: number) => {
+    setSelectedSimulationId(simulationId);
+    setCurrentView('simulation');
+  };
+
+  const handleCreateNewSimulation = () => {
+    setSelectedSimulationId(null);
     setCurrentView('simulation');
   };
 
@@ -160,7 +173,8 @@ export default function App() {
       duration: '20 min',
       participants: 'Test',
       objectives: ['Test'],
-      skills: ['Test']
+      skills: ['Test'],
+      is_featured: false
     };
     setSelectedScenario(scenario);
     setCurrentView('simulation');
@@ -178,14 +192,27 @@ export default function App() {
   }
 
   switch (currentView) {
+    case 'scenario-history':
+      return selectedScenario ? (
+        <div>
+          <Header user={user} onLogout={handleLogout} currentView="dashboard" />
+          <ScenarioHistoryView
+            scenario={selectedScenario}
+            onSelectSimulation={handleSelectSimulation}
+            onCreateNewSimulation={handleCreateNewSimulation}
+            onBackToDashboard={handleBackToDashboard}
+          />
+        </div>
+      ) : null;
+
     case 'simulation':
       return selectedScenario ? (
         <div>
           <Header user={user} onLogout={handleLogout} currentView="simulation" />
-          <SimulationViewFixed
-            scenario={selectedScenario}
+          <SimulationView
+            scenario={{...selectedScenario, is_featured: selectedScenario.is_featured || false}}
             onEndSimulation={handleEndSimulation}
-            onBackToDashboard={handleBackToDashboard}
+            onBackToDashboard={() => setCurrentView('scenario-history')}
           />
         </div>
       ) : null;

@@ -10,7 +10,11 @@ import { Slider } from "./ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { apiService, type CustomSimulation } from "../services/api";
+import { apiService, type CustomSimulation as ApiCustomSimulation } from "../services/api";
+import { useTranslation } from "react-i18next";
+
+// Use API type directly
+type CustomSimulation = ApiCustomSimulation;
 import { 
   ArrowLeft, 
   ArrowRight, 
@@ -49,54 +53,68 @@ interface CreatorViewProps {
   onSimulationCreated: (simulation: CustomSimulation) => void;
 }
 
-interface CustomSimulation {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  difficulty: string;
-  skills: string[];
-  userRole: string;
-  aiRole: string;
-  aiPersonality: {
-    analytical: number;
-    patience: number;
-    aggression: number;
-    flexibility: number;
-  };
-  aiObjectives: string[];
-  userObjectives: string[];
-  endConditions: string[];
-  knowledgeBase?: string;
-  isPublished: boolean;
-  createdBy: string;
-  createdAt: Date;
-}
 
-const AVAILABLE_SKILLS = [
-  "Negociación", "Liderazgo", "Comunicación Asertiva", "Pensamiento Estratégico",
-  "Resolución de Conflictos", "Toma de Decisiones", "Gestión de Crisis", 
-  "Presentaciones", "Coaching", "Delegación", "Innovación", "Análisis Financiero"
-];
+// Skills will be translated using t() function in the component
 
-const DIFFICULTY_LEVELS = [
-  { value: "Principiante", label: "Principiante", color: "bg-green-500", description: "Ideal para primeras experiencias" },
-  { value: "Intermedio", label: "Intermedio", color: "bg-yellow-500", description: "Requiere experiencia previa" },
-  { value: "Avanzado", label: "Avanzado", color: "bg-red-500", description: "Para profesionales experimentados" },
-  { value: "Experto", label: "Experto", color: "bg-purple-500", description: "Máximo nivel de complejidad" }
-];
+// Difficulty levels will be translated using t() function in the component
 
-const CATEGORIES = [
-  { value: "Liderazgo Ejecutivo", icon: Users, color: "text-blue-600" },
-  { value: "Estrategia Corporativa", icon: Building2, color: "text-purple-600" },
-  { value: "Emprendimiento", icon: Lightbulb, color: "text-orange-600" },
-  { value: "Estrategia Global", icon: Globe, color: "text-green-600" },
-  { value: "Gestión de Talento", icon: TrendingUp, color: "text-pink-600" },
-  { value: "Gobernanza Corporativa", icon: BarChart3, color: "text-indigo-600" }
-];
+// Categories will be translated using t() function in the component
 
 export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorViewProps) {
+  const { t } = useTranslation(['creator', 'common']);
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Helper functions for translated constants
+  const getAvailableSkills = () => [
+    t('creator:skills.negotiation', { defaultValue: 'Negociación' }),
+    t('creator:skills.leadership', { defaultValue: 'Liderazgo' }),
+    t('creator:skills.assertiveCommunication', { defaultValue: 'Comunicación Asertiva' }),
+    t('creator:skills.strategicThinking', { defaultValue: 'Pensamiento Estratégico' }),
+    t('creator:skills.conflictResolution', { defaultValue: 'Resolución de Conflictos' }),
+    t('creator:skills.decisionMaking', { defaultValue: 'Toma de Decisiones' }),
+    t('creator:skills.crisisManagement', { defaultValue: 'Gestión de Crisis' }),
+    t('creator:skills.presentations', { defaultValue: 'Presentaciones' }),
+    t('creator:skills.coaching', { defaultValue: 'Coaching' }),
+    t('creator:skills.delegation', { defaultValue: 'Delegación' }),
+    t('creator:skills.innovation', { defaultValue: 'Innovación' }),
+    t('creator:skills.financialAnalysis', { defaultValue: 'Análisis Financiero' })
+  ];
+
+  const getDifficultyLevels = () => [
+    {
+      value: "Principiante",
+      label: t('creator:difficulty.beginner', { defaultValue: 'Principiante' }),
+      color: "bg-green-500",
+      description: t('creator:difficulty.beginnerDesc', { defaultValue: 'Ideal para primeras experiencias' })
+    },
+    {
+      value: "Intermedio",
+      label: t('creator:difficulty.intermediate', { defaultValue: 'Intermedio' }),
+      color: "bg-yellow-500",
+      description: t('creator:difficulty.intermediateDesc', { defaultValue: 'Requiere experiencia previa' })
+    },
+    {
+      value: "Avanzado",
+      label: t('creator:difficulty.advanced', { defaultValue: 'Avanzado' }),
+      color: "bg-red-500",
+      description: t('creator:difficulty.advancedDesc', { defaultValue: 'Para profesionales experimentados' })
+    },
+    {
+      value: "Experto",
+      label: t('creator:difficulty.expert', { defaultValue: 'Experto' }),
+      color: "bg-purple-500",
+      description: t('creator:difficulty.expertDesc', { defaultValue: 'Máximo nivel de complejidad' })
+    }
+  ];
+
+  const getCategories = () => [
+    { value: "Liderazgo Ejecutivo", label: t('creator:categories.executiveLeadership', { defaultValue: 'Liderazgo Ejecutivo' }), icon: Users, color: "text-blue-600" },
+    { value: "Estrategia Corporativa", label: t('creator:categories.corporateStrategy', { defaultValue: 'Estrategia Corporativa' }), icon: Building2, color: "text-purple-600" },
+    { value: "Emprendimiento", label: t('creator:categories.entrepreneurship', { defaultValue: 'Emprendimiento' }), icon: Lightbulb, color: "text-orange-600" },
+    { value: "Estrategia Global", label: t('creator:categories.globalStrategy', { defaultValue: 'Estrategia Global' }), icon: Globe, color: "text-green-600" },
+    { value: "Gestión de Talento", label: t('creator:categories.talentManagement', { defaultValue: 'Gestión de Talento' }), icon: TrendingUp, color: "text-pink-600" },
+    { value: "Gobernanza Corporativa", label: t('creator:categories.corporateGovernance', { defaultValue: 'Gobernanza Corporativa' }), icon: BarChart3, color: "text-indigo-600" }
+  ];
   const [showAiObjectives, setShowAiObjectives] = useState(false);
   
   // Form data state
@@ -224,22 +242,22 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
         category: createdSimulation.category,
         difficulty: createdSimulation.difficulty,
         skills: createdSimulation.skills,
-        userRole: createdSimulation.user_role,
-        aiRole: createdSimulation.ai_role,
-        aiPersonality: createdSimulation.ai_personality,
-        aiObjectives: createdSimulation.ai_objectives,
-        userObjectives: createdSimulation.user_objectives,
-        endConditions: createdSimulation.end_conditions,
-        knowledgeBase: createdSimulation.knowledge_base,
-        isPublished: createdSimulation.is_published,
-        createdBy: createdSimulation.created_by_name || "Usuario Actual",
-        createdAt: new Date(createdSimulation.created_at)
+        userRole: createdSimulation.userRole,
+        aiRole: createdSimulation.aiRole,
+        aiPersonality: createdSimulation.aiPersonality,
+        aiObjectives: createdSimulation.aiObjectives,
+        userObjectives: createdSimulation.userObjectives,
+        endConditions: createdSimulation.endConditions,
+        knowledgeBase: createdSimulation.knowledgeBase,
+        isPublished: createdSimulation.isPublished,
+        createdBy: createdSimulation.createdBy,
+        createdAt: createdSimulation.createdAt
       };
 
       onSimulationCreated(simulation);
     } catch (error) {
       console.error('Error saving simulation:', error);
-      alert('Error al guardar la simulación. Por favor, intenta de nuevo.');
+      alert(t('creator:saveError', { defaultValue: 'Error al guardar la simulación. Por favor, intenta de nuevo.' }));
     }
   };
 
@@ -265,43 +283,43 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
     switch (step) {
       case 1:
         return {
-          title: "Información General",
-          description: "Define la identidad y contexto de tu simulación",
+          title: t('creator:steps.generalInfo.title', { defaultValue: 'Información General' }),
+          description: t('creator:steps.generalInfo.description', { defaultValue: 'Define la identidad y contexto de tu simulación' }),
           icon: Sparkles,
           color: "from-blue-600 to-purple-600"
         };
       case 2:
         return {
-          title: "Definición de Roles",
-          description: "Establece los personajes y sus contextos",
+          title: t('creator:steps.roleDefinition.title', { defaultValue: 'Definición de Roles' }),
+          description: t('creator:steps.roleDefinition.description', { defaultValue: 'Establece los personajes y sus contextos' }),
           icon: Users,
           color: "from-purple-600 to-pink-600"
         };
       case 3:
         return {
-          title: "Personalidad de la IA",
-          description: "Diseña el comportamiento de tu contraparte",
+          title: t('creator:steps.aiPersonality.title', { defaultValue: 'Personalidad de la IA' }),
+          description: t('creator:steps.aiPersonality.description', { defaultValue: 'Diseña el comportamiento de tu contraparte' }),
           icon: Brain,
           color: "from-orange-600 to-red-600"
         };
       case 4:
         return {
-          title: "Objetivos y Metas",
-          description: "Define cómo se gana y cuándo termina",
+          title: t('creator:steps.objectives.title', { defaultValue: 'Objetivos y Metas' }),
+          description: t('creator:steps.objectives.description', { defaultValue: 'Define cómo se gana y cuándo termina' }),
           icon: Target,
           color: "from-green-600 to-emerald-600"
         };
       case 5:
         return {
-          title: "Revisión Final",
-          description: "Confirma y publica tu simulación",
+          title: t('creator:steps.finalReview.title', { defaultValue: 'Revisión Final' }),
+          description: t('creator:steps.finalReview.description', { defaultValue: 'Confirma y publica tu simulación' }),
           icon: CheckCircle2,
           color: "from-indigo-600 to-purple-600"
         };
       default:
         return {
-          title: "Paso",
-          description: "Descripción del paso",
+          title: t('creator:step', { defaultValue: 'Paso' }),
+          description: t('creator:stepDescription', { defaultValue: 'Descripción del paso' }),
           icon: Settings,
           color: "from-gray-600 to-gray-600"
         };
@@ -390,11 +408,11 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
                           <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>
                         <SelectContent>
-                          {CATEGORIES.map((category) => (
+                          {getCategories().map((category) => (
                             <SelectItem key={category.value} value={category.value}>
                               <div className="flex items-center gap-2">
                                 <category.icon className={`h-4 w-4 ${category.color}`} />
-                                {category.value}
+                                {category.label}
                               </div>
                             </SelectItem>
                           ))}
@@ -421,7 +439,7 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
                           <SelectValue placeholder="Selecciona la dificultad" />
                         </SelectTrigger>
                         <SelectContent>
-                          {DIFFICULTY_LEVELS.map((level) => (
+                          {getDifficultyLevels().map((level) => (
                             <SelectItem key={level.value} value={level.value}>
                               <div className="flex items-center gap-2">
                                 <div className={`w-3 h-3 rounded-full ${level.color}`}></div>
@@ -485,7 +503,7 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
                       </div>
                       
                       <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto p-4 bg-gray-50 rounded-lg border border-gray-200">
-                        {AVAILABLE_SKILLS.map((skill) => (
+                        {getAvailableSkills().map((skill) => (
                           <div
                             key={skill}
                             onClick={() => handleSkillToggle(skill)}
@@ -498,7 +516,7 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
                             <div className="flex items-center gap-2">
                               <Checkbox
                                 checked={formData.skills?.includes(skill) || false}
-                                readOnly
+                                disabled
                                 className="border-current"
                               />
                               <span className="text-sm font-medium">{skill}</span>

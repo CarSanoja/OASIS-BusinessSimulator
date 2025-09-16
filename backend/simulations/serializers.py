@@ -14,15 +14,22 @@ class SimulationSerializer(serializers.ModelSerializer):
     messages = MessageSerializer(many=True, read_only=True)
     scenario_title = serializers.CharField(source='scenario.title', read_only=True)
     custom_simulation_title = serializers.CharField(source='custom_simulation.title', read_only=True)
-    
+
     class Meta:
         model = Simulation
         fields = [
             'id', 'user', 'scenario', 'custom_simulation', 'status',
             'started_at', 'ended_at', 'duration_minutes', 'messages',
-            'scenario_title', 'custom_simulation_title'
+            'scenario_title', 'custom_simulation_title',
+            'title', 'summary', 'last_message_preview',
+            'objectives_completed', 'total_objectives', 'final_score'
         ]
-        read_only_fields = ['id', 'user', 'started_at', 'ended_at', 'duration_minutes']
+        read_only_fields = [
+            'id', 'user', 'started_at', 'ended_at', 'duration_minutes',
+            'messages', 'scenario_title', 'custom_simulation_title',
+            'title', 'summary', 'last_message_preview',
+            'objectives_completed', 'total_objectives', 'final_score'
+        ]
 
 
 class SimulationCreateSerializer(serializers.ModelSerializer):

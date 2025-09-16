@@ -15,6 +15,14 @@ class Simulation(models.Model):
     started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(null=True, blank=True)
     duration_minutes = models.IntegerField(null=True, blank=True)
+
+    # History fields - nullable initially for safe migration
+    title = models.CharField(max_length=200, blank=True, null=True)
+    summary = models.TextField(blank=True, null=True)
+    last_message_preview = models.TextField(blank=True, null=True)
+    objectives_completed = models.IntegerField(null=True, blank=True, default=0)
+    total_objectives = models.IntegerField(null=True, blank=True, default=0)
+    final_score = models.IntegerField(null=True, blank=True)
     
     class Meta:
         db_table = 'simulations'

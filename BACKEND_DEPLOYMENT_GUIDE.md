@@ -542,7 +542,206 @@ SSH Key (on server): /home/ubuntu/.ssh/authorized_keys
 
 ---
 
+## 🌐 Frontend Deployment & Vercel Configuration
+
+### **Vercel Setup Completo**
+
+El frontend de OASIS está configurado para deployarse en Vercel con integración completa al backend de producción.
+
+#### **1. Configuración de Vercel (`vercel.json`):**
+```json
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ],
+  "env": {
+    "VITE_API_URL": "http://35.153.104.243:8009",
+    "VITE_APP_NAME": "OASIS Business Simulator",
+    "VITE_APP_VERSION": "1.0.0",
+    "VITE_NODE_ENV": "production"
+  }
+}
+```
+
+#### **2. Configuración de Dominio Personalizado:**
+
+**Para configurar `oasis.somosquanta.com` en Vercel:**
+
+1. **En Vercel Dashboard:**
+   - Settings → Domains → Add Domain
+   - Ingresar: `oasis.somosquanta.com`
+   - Click "Add"
+
+2. **DNS Records en Hostinger:**
+   ```dns
+   Type: CNAME
+   Name: oasis
+   Value: cname.vercel-dns.com
+   TTL: 3600
+
+   Type: CNAME
+   Name: www.oasis
+   Value: cname.vercel-dns.com
+   TTL: 3600
+   ```
+
+3. **Configuración en Hostinger:**
+   - Login → hPanel → Domains → DNS Zone
+   - Select `somosquanta.com`
+   - Add los CNAME records de arriba
+   - Esperar 15-30 minutos para propagación
+
+#### **3. URLs Finales del Sistema:**
+
+| Componente | URL | Propósito |
+|------------|-----|-----------|
+| **Frontend** | `https://oasis.somosquanta.com` | Aplicación principal |
+| **API Backend** | `http://35.153.104.243:8009` | API REST |
+| **API Docs** | `http://35.153.104.243:8009/api/` | Documentación API |
+| **Admin Panel** | `http://35.153.104.243:8009/admin/` | Panel administrativo |
+| **Health Check** | `http://35.153.104.243:8009/health/` | Estado del sistema |
+
+#### **4. Environment Variables de Producción:**
+```env
+# Frontend (.env.production)
+VITE_API_URL=http://35.153.104.243:8009
+VITE_APP_NAME=OASIS Business Simulator
+VITE_APP_VERSION=1.0.0
+VITE_NODE_ENV=production
+
+# Backend (/opt/oasis/backend/.env.production)
+OPENAI_API_KEY=your_actual_openai_api_key_here
+```
+
+### **Deployment Process:**
+
+1. **Automatic Deployment:**
+   ```bash
+   # Cualquier push a main branch triggerea auto-deploy
+   git add .
+   git commit -m "Update frontend"
+   git push origin main
+   ```
+
+2. **Manual Deploy:**
+   ```bash
+   cd /path/to/frontend
+   vercel --prod
+   ```
+
+#### **5. Testing Frontend-Backend Integration:**
+
+```bash
+# 1. Test backend health
+curl http://35.153.104.243:8009/health/
+
+# 2. Test CORS configuration
+curl -X OPTIONS http://35.153.104.243:8009/api/scenarios/ \
+  -H "Origin: https://oasis.somosquanta.com" \
+  -H "Access-Control-Request-Method: GET"
+
+# 3. Test API from frontend
+# (Open browser dev tools on https://oasis.somosquanta.com)
+fetch('/api/scenarios/')
+```
+
+#### **6. CORS Configuration:**
+El backend está configurado para aceptar requests desde:
+- `https://oasis.somosquanta.com`
+- `https://www.oasis.somosquanta.com`
+- `http://localhost:3000` (desarrollo)
+
+### **Troubleshooting Frontend:**
+
+#### **CORS Issues:**
+```bash
+# Update CORS settings on backend
+ssh -i ~/Downloads/OASIS-deploy-key.pem ubuntu@35.153.104.243
+sudo nano /opt/oasis/backend/.env.production
+
+# Add/Update:
+CORS_ALLOWED_ORIGINS=https://oasis.somosquanta.com,https://www.oasis.somosquanta.com
+
+# Restart Django
+cd /opt/oasis/backend
+docker compose -f docker-compose.production.yml restart django
+```
+
+#### **Domain Propagation Issues:**
+```bash
+# Check DNS propagation
+nslookup oasis.somosquanta.com
+dig oasis.somosquanta.com CNAME
+
+# Check from different locations
+# Use https://www.whatsmydns.net/
+```
+
+#### **Build Errors:**
+```bash
+# Common fixes in vercel.json:
+{
+  "buildCommand": "npm ci && npm run build",
+  "installCommand": "npm ci",
+  "outputDirectory": "dist"
+}
+```
+
+---
+
+## 📱 Sistema Completo - URLs Finales
+
+### **Producción Activa:**
+- **🌐 Frontend**: `https://oasis.somosquanta.com`
+- **⚙️ Backend API**: `http://35.153.104.243:8009`
+- **🔒 SSL Backend**: `https://api.oasis.somosquanta.com` (pending nginx fix)
+- **📊 Health Check**: `http://35.153.104.243:8009/health/`
+
+### **Development:**
+- **🌐 Frontend Local**: `http://localhost:3000`
+- **⚙️ Backend Local**: `http://localhost:8009`
+
+### **Monitoring & Admin:**
+- **📈 Container Status**: `docker compose ps`
+- **🔍 Logs**: `docker logs oasis_django --follow`
+- **⚡ Admin Panel**: `http://35.153.104.243:8009/admin/`
+
+---
+
+## ⚠️ Configuraciones Pendientes
+
+### **Críticas (Requeridas para funcionamiento completo):**
+1. **🔑 OpenAI API Key**:
+   ```bash
+   # Update en servidor
+   OPENAI_API_KEY=sk-your-actual-key-here
+   ```
+
+2. **🌐 Nginx HTTPS Proxy Fix**:
+   ```bash
+   # Para que https://api.oasis.somosquanta.com funcione correctamente
+   sudo systemctl reload nginx
+   ```
+
+### **Opcionales (Mejoras futuras):**
+1. **📊 Monitoring**: CloudWatch, Prometheus
+2. **🔒 Security Hardening**: Rotate secrets, API rate limiting
+3. **⚡ Performance**: CDN, Database optimization
+4. **💾 Backups**: Automated database backups
+
+---
+
 **✅ Deployment Completed Successfully**
 **🔧 Maintained by**: Claude + Carlos
 **📅 Last Updated**: 16 Sept 2025
 **🚀 Status**: Production Ready
+
+**Frontend**: ✅ Vercel Configuration Complete
+**Backend**: ✅ AWS EC2 Fully Operational
+**Integration**: ✅ Ready for Testing

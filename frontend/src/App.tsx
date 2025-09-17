@@ -78,7 +78,7 @@ export default function App() {
   useEffect(() => {
     const savedUser = localStorage.getItem('userData') || localStorage.getItem('oasis-user') || localStorage.getItem('user');
     const authToken = localStorage.getItem('authToken') || localStorage.getItem('access_token');
-    
+
     if (savedUser && authToken) {
       try {
         const userData = JSON.parse(savedUser);
@@ -86,6 +86,9 @@ export default function App() {
         setCurrentView('dashboard');
         // Ensure API service has the token
         apiService.setToken(authToken);
+
+        // Load custom simulations
+        loadCustomSimulations();
       } catch (error) {
         // Clear invalid session data
         localStorage.removeItem('oasis-user');
@@ -97,10 +100,23 @@ export default function App() {
     }
   }, []);
 
+  // Load custom simulations from backend
+  const loadCustomSimulations = async () => {
+    try {
+      const simulations = await apiService.getCustomSimulations();
+      setCustomSimulations(simulations);
+    } catch (error) {
+      console.error('Error loading custom simulations:', error);
+    }
+  };
+
   const handleLogin = (userData: UserData) => {
     setUser(userData);
     setCurrentView('dashboard');
     localStorage.setItem('oasis-user', JSON.stringify(userData));
+
+    // Load custom simulations after login
+    loadCustomSimulations();
   };
 
   const handleLogout = async () => {

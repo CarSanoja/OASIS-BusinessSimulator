@@ -10,19 +10,26 @@ import { Slider } from "./ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { apiService, type CustomSimulation as ApiCustomSimulation } from "../services/api";
 import { useTranslation } from "react-i18next";
 
 // Use API type directly
 type CustomSimulation = ApiCustomSimulation;
-import { 
-  ArrowLeft, 
-  ArrowRight, 
-  CheckCircle2, 
-  Settings, 
-  Users, 
-  Target, 
-  Brain, 
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Settings,
+  Users,
+  Target,
+  Brain,
   Sparkles,
   Plus,
   Trash2,
@@ -45,7 +52,8 @@ import {
   Globe,
   TrendingUp,
   Building2,
-  BarChart3
+  BarChart3,
+  Send
 } from "lucide-react";
 
 interface CreatorViewProps {
@@ -63,6 +71,12 @@ interface CreatorViewProps {
 export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorViewProps) {
   const { t } = useTranslation(['creator', 'common']);
   const [currentStep, setCurrentStep] = useState(1);
+  const [testMode, setTestMode] = useState(false);
+  const [testMessage, setTestMessage] = useState('');
+  const [testResponse, setTestResponse] = useState<{ response: string; emotion: string } | null>(null);
+  const [isTestLoading, setIsTestLoading] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [savedSimulationId, setSavedSimulationId] = useState<string | null>(null);
 
   // Helper functions for translated constants
   const getAvailableSkills = () => [
@@ -207,7 +221,7 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
     }
   };
 
-  const handleSave = async (publish: boolean = false) => {
+  const handleSave = async (publish: boolean = false, returnToList: boolean = true) => {
     try {
       const simulationData = {
         title: formData.title || "",
@@ -227,7 +241,8 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
 
       // Create simulation via API
       const createdSimulation = await apiService.createCustomSimulation(simulationData);
-      
+      setSavedSimulationId(createdSimulation.id);
+
       // If publish is requested, publish it
       if (publish && createdSimulation.id) {
         await apiService.publishCustomSimulation(createdSimulation.id);
@@ -254,10 +269,56 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
         createdAt: createdSimulation.createdAt
       };
 
-      onSimulationCreated(simulation);
+      // Show success message
+      setShowSuccessMessage(true);
+      setTimeout(() => setShowSuccessMessage(false), 3000);
+
+      if (returnToList) {
+        // Wait a bit for the user to see the success message
+        setTimeout(() => {
+          onSimulationCreated(simulation);
+        }, 1500);
+      }
+
+      return createdSimulation.id;
     } catch (error) {
       console.error('Error saving simulation:', error);
       alert(t('creator:saveError', { defaultValue: 'Error al guardar la simulación. Por favor, intenta de nuevo.' }));
+      return null;
+    }
+  };
+
+  const handleTest = async () => {
+    try {
+      // Save the simulation first if not already saved
+      let simId = savedSimulationId;
+      if (!simId) {
+        simId = await handleSave(false, false);
+        if (!simId) return; // Save failed
+      }
+
+      setTestMode(true);
+      setTestMessage('');
+      setTestResponse(null);
+    } catch (error) {
+      console.error('Error initiating test:', error);
+      alert(t('creator:testError', { defaultValue: 'Error al iniciar la prueba. Por favor, intenta de nuevo.' }));
+    }
+  };
+
+  const handleSendTestMessage = async () => {
+    if (!savedSimulationId || !testMessage.trim()) return;
+
+    try {
+      setIsTestLoading(true);
+      const response = await apiService.testCustomSimulation(savedSimulationId, testMessage);
+      setTestResponse(response);
+      setTestMessage('');
+    } catch (error) {
+      console.error('Error sending test message:', error);
+      alert(t('creator:testMessageError', { defaultValue: 'Error al enviar el mensaje de prueba.' }));
+    } finally {
+      setIsTestLoading(false);
     }
   };
 
@@ -1395,7 +1456,7 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
                           Publicar Simulación
                         </Button>
                         <Button
-                          onClick={() => {/* TODO: Implementar test */}}
+                          onClick={handleTest}
                           variant="outline"
                           className="w-full border-indigo-200 text-indigo-700 hover:bg-indigo-50 h-12"
                         >
@@ -1556,6 +1617,151 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
           </div>
         </div>
       </div>
+
+      {/* Success Message Toast */}
+      {showSuccessMessage && (
+        <div className="fixed top-4 right-4 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="bg-green-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5" />
+            <span className="font-medium">
+              {savedSimulationId ? t('creator:simulationSaved', { defaultValue: '¡Simulación guardada exitosamente!' }) : ''}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Test Mode Modal */}
+      <Dialog open={testMode} onOpenChange={setTestMode}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Play className="h-5 w-5 text-blue-600" />
+              {t('creator:testMode', { defaultValue: 'Modo de Prueba' })}
+            </DialogTitle>
+            <DialogDescription>
+              {t('creator:testDescription', { defaultValue: 'Prueba tu simulación enviando mensajes y viendo cómo responde la IA con la personalidad y objetivos configurados.' })}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {/* Simulation Info */}
+            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">{t('creator:title', { defaultValue: 'Título:' })}</span>
+                <span className="text-gray-900">{formData.title}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">{t('creator:aiRole', { defaultValue: 'Rol de la IA:' })}</span>
+                <span className="text-gray-900">{formData.aiRole}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium text-gray-700">{t('creator:userRole', { defaultValue: 'Tu Rol:' })}</span>
+                <span className="text-gray-900">{formData.userRole}</span>
+              </div>
+            </div>
+
+            {/* Chat Messages */}
+            <div className="border rounded-lg p-4 min-h-[200px] max-h-[300px] overflow-y-auto bg-white">
+              {testResponse ? (
+                <div className="space-y-4">
+                  {/* User Message */}
+                  <div className="flex justify-end">
+                    <div className="max-w-xs lg:max-w-md">
+                      <div className="bg-gradient-to-br from-blue-600 to-purple-600 text-white p-3 rounded-lg">
+                        <p className="text-sm">{testMessage || 'Tu mensaje...'}</p>
+                      </div>
+                      <div className="text-xs text-gray-500 text-right mt-1">
+                        <User className="inline h-3 w-3 mr-1" />
+                        {formData.userRole}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* AI Response */}
+                  <div className="flex justify-start">
+                    <div className="max-w-xs lg:max-w-md">
+                      <div className="bg-gray-100 text-gray-900 p-3 rounded-lg">
+                        <p className="text-sm">{testResponse.response}</p>
+                        {testResponse.emotion && (
+                          <Badge className="mt-2 bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                            {testResponse.emotion}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        <Bot className="inline h-3 w-3 mr-1" />
+                        {formData.aiRole}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  <p className="text-sm">
+                    {t('creator:sendTestMessage', { defaultValue: 'Envía un mensaje para iniciar la conversación de prueba' })}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Message Input */}
+            <div className="flex gap-2">
+              <Textarea
+                value={testMessage}
+                onChange={(e) => setTestMessage(e.target.value)}
+                placeholder={t('creator:testPlaceholder', { defaultValue: 'Escribe tu mensaje de prueba aquí...' })}
+                className="flex-1 min-h-[60px] resize-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendTestMessage();
+                  }
+                }}
+                disabled={isTestLoading}
+              />
+              <Button
+                onClick={handleSendTestMessage}
+                disabled={!testMessage.trim() || isTestLoading}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+              >
+                {isTestLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-between items-center pt-4 border-t">
+              <p className="text-sm text-gray-600">
+                {t('creator:testNote', { defaultValue: 'Esta es una prueba. Los mensajes no se guardan.' })}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setTestMode(false);
+                    setTestMessage('');
+                    setTestResponse(null);
+                  }}
+                >
+                  {t('common:close', { defaultValue: 'Cerrar' })}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setTestMessage('');
+                    setTestResponse(null);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {t('creator:newTest', { defaultValue: 'Nueva Prueba' })}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </TooltipProvider>
   );
 }

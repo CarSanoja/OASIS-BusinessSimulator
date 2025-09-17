@@ -58,7 +58,7 @@ interface CustomSimulation {
   knowledgeBase?: string;
   isPublished: boolean;
   createdBy: string;
-  createdAt: Date;
+  createdAt: string | Date;
 }
 
 type AppState = 'landing' | 'dashboard' | 'simulation' | 'feedback' | 'progress' | 'creator' | 'scenario-history';

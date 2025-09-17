@@ -455,7 +455,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                   
                   <div className="flex items-center justify-between">
                     <div className="text-xs text-gray-500">
-                      {simulation.createdAt.toLocaleDateString()}
+                      {new Date(simulation.createdAt).toLocaleDateString()}
                     </div>
                     <Button
                       size="sm"

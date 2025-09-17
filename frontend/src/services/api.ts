@@ -46,7 +46,7 @@ interface CustomSimulation {
   knowledgeBase?: string;
   isPublished: boolean;
   createdBy: string;
-  createdAt: Date;
+  createdAt: string | Date;
 }
 
 interface Message {
@@ -230,8 +230,26 @@ class ApiService {
 
   // Custom Simulations
   async getCustomSimulations(): Promise<CustomSimulation[]> {
-    const response = await this.request<{ results: CustomSimulation[] }>('/scenarios/custom-simulations/');
-    return response.results;
+    const response = await this.request<{ results: any[] }>('/scenarios/custom-simulations/');
+    // Map backend snake_case to frontend camelCase
+    return response.results.map((sim: any) => ({
+      id: sim.id.toString(),
+      title: sim.title,
+      description: sim.description,
+      category: sim.category,
+      difficulty: sim.difficulty,
+      skills: sim.skills,
+      userRole: sim.user_role,
+      aiRole: sim.ai_role,
+      aiPersonality: sim.ai_personality,
+      aiObjectives: sim.ai_objectives,
+      userObjectives: sim.user_objectives,
+      endConditions: sim.end_conditions,
+      knowledgeBase: sim.knowledge_base,
+      isPublished: sim.is_published,
+      createdBy: sim.created_by?.toString() || sim.created_by_name || '',
+      createdAt: sim.created_at
+    }));
   }
 
   async createCustomSimulation(data: Partial<CustomSimulation>): Promise<CustomSimulation> {

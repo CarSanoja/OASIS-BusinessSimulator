@@ -59,9 +59,10 @@ interface DashboardViewProps {
   onViewProgress: () => void;
   onViewCreator: () => void;
   customSimulations: CustomSimulation[];
+  onCustomSimulationsLoaded?: (simulations: CustomSimulation[]) => void;
 }
 
-export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator, customSimulations }: DashboardViewProps) {
+export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator, customSimulations, onCustomSimulationsLoaded }: DashboardViewProps) {
   const { t } = useTranslation(['dashboard', 'common']);
 
   // Enhanced debug logging for custom simulations
@@ -142,6 +143,16 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
         // Load categories
         const categoriesResponse = await apiService.getCategories();
         setCategories(categoriesResponse);
+
+        // Load custom simulations (this was missing!)
+        console.log('🔄 [DashboardView] Loading custom simulations...');
+        const customSimulationsResponse = await apiService.getCustomSimulations();
+        console.log('✅ [DashboardView] Custom simulations loaded:', customSimulationsResponse.length);
+
+        // Update parent state if callback provided
+        if (onCustomSimulationsLoaded) {
+          onCustomSimulationsLoaded(customSimulationsResponse);
+        }
 
         setError(null);
       } catch (err) {

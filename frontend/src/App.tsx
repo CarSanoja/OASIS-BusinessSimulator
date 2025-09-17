@@ -296,11 +296,12 @@ export default function App() {
       return (
         <div>
           <Header user={user} onLogout={handleLogout} currentView="dashboard" />
-          <DashboardView 
+          <DashboardView
             onStartSimulation={handleStartSimulation}
             onViewProgress={handleViewProgress}
             onViewCreator={handleViewCreator}
             customSimulations={customSimulations}
+            onCustomSimulationsLoaded={setCustomSimulations}
           />
         </div>
       );

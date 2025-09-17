@@ -100,20 +100,36 @@ export default function App() {
     }
   }, []);
 
+  // Track customSimulations state changes
+  useEffect(() => {
+    console.log('🎯 [App.tsx] customSimulations state changed:', customSimulations.length, 'simulations');
+    console.log('📊 [App.tsx] Current customSimulations:', customSimulations);
+  }, [customSimulations]);
+
   // Load custom simulations from backend
   const loadCustomSimulations = async () => {
     try {
-      console.log('🔍 Loading custom simulations...');
+      console.log('🔍 [App.tsx] Starting to load custom simulations...');
+      console.log('🔍 [App.tsx] Current user:', user);
+      console.log('🔍 [App.tsx] Auth token from localStorage:', localStorage.getItem('access_token') || localStorage.getItem('authToken'));
+
       const simulations = await apiService.getCustomSimulations();
-      console.log('✅ Custom simulations loaded:', simulations.length, 'simulations');
-      console.log('📋 Simulations data:', simulations);
+      console.log('✅ [App.tsx] Custom simulations loaded from API:', simulations.length, 'simulations');
+      console.log('📋 [App.tsx] Raw simulations data:', simulations);
+
+      console.log('🔄 [App.tsx] Setting customSimulations state...');
       setCustomSimulations(simulations);
+      console.log('✅ [App.tsx] customSimulations state updated');
     } catch (error) {
-      console.error('❌ Error loading custom simulations:', error);
-      console.error('Error details:', {
+      console.error('❌ [App.tsx] Error loading custom simulations:', error);
+      console.error('🔍 [App.tsx] Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : 'No stack trace'
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        type: typeof error,
+        stringified: JSON.stringify(error)
       });
+      // Set empty array on error to ensure UI shows "no simulations" instead of loading state
+      setCustomSimulations([]);
     }
   };
 

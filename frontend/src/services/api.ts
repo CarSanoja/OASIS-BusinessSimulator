@@ -93,10 +93,12 @@ class ApiService {
 
   constructor() {
     this.token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
+    console.log('🔧 [ApiService] Constructor - token loaded:', this.token ? 'Present' : 'Missing');
   }
 
   // Method to update token when it changes
   setToken(token: string) {
+    console.log('🔧 [ApiService] setToken called with:', token ? 'New token set' : 'Token cleared');
     this.token = token;
   }
 
@@ -231,31 +233,47 @@ class ApiService {
   // Custom Simulations
   async getCustomSimulations(): Promise<CustomSimulation[]> {
     console.log('🌐 Fetching custom simulations from API...');
+    console.log('🔑 Current token:', this.token ? 'Present' : 'Missing');
+    console.log('🔗 Request URL will be:', `${this.baseURL}${this.baseURL.endsWith('/api') ? '' : '/api'}/scenarios/custom-simulations/`);
+
     const response = await this.request<{ results: any[] }>('/scenarios/custom-simulations/');
     console.log('📡 Raw API response:', response);
     console.log('📊 Found', response.results?.length || 0, 'custom simulations');
+    console.log('🔍 Response results type:', typeof response.results);
+    console.log('🔍 Is results array?', Array.isArray(response.results));
+
+    if (!response.results || !Array.isArray(response.results)) {
+      console.error('❌ Invalid response format - results is not an array:', response);
+      return [];
+    }
 
     // Map backend snake_case to frontend camelCase
-    const mappedSimulations = response.results.map((sim: any) => ({
-      id: sim.id.toString(),
-      title: sim.title,
-      description: sim.description,
-      category: sim.category,
-      difficulty: sim.difficulty,
-      skills: sim.skills,
-      userRole: sim.user_role,
-      aiRole: sim.ai_role,
-      aiPersonality: sim.ai_personality,
-      aiObjectives: sim.ai_objectives,
-      userObjectives: sim.user_objectives,
-      endConditions: sim.end_conditions,
-      knowledgeBase: sim.knowledge_base,
-      isPublished: sim.is_published,
-      createdBy: sim.created_by?.toString() || sim.created_by_name || '',
-      createdAt: sim.created_at
-    }));
+    const mappedSimulations = response.results.map((sim: any, index: number) => {
+      console.log(`🔄 Mapping simulation ${index + 1}:`, sim);
+      const mapped = {
+        id: sim.id?.toString() || '',
+        title: sim.title || 'Untitled',
+        description: sim.description || '',
+        category: sim.category || '',
+        difficulty: sim.difficulty || '',
+        skills: sim.skills || [],
+        userRole: sim.user_role || '',
+        aiRole: sim.ai_role || '',
+        aiPersonality: sim.ai_personality || { analytical: 50, patience: 50, aggression: 50, flexibility: 50 },
+        aiObjectives: sim.ai_objectives || [],
+        userObjectives: sim.user_objectives || [],
+        endConditions: sim.end_conditions || [],
+        knowledgeBase: sim.knowledge_base || '',
+        isPublished: sim.is_published || false,
+        createdBy: sim.created_by?.toString() || sim.created_by_name || 'Unknown',
+        createdAt: sim.created_at || new Date().toISOString()
+      };
+      console.log(`✅ Mapped simulation ${index + 1}:`, mapped);
+      return mapped;
+    });
 
-    console.log('🔄 Mapped simulations:', mappedSimulations);
+    console.log('🔄 All mapped simulations:', mappedSimulations);
+    console.log('📊 Returning', mappedSimulations.length, 'simulations to frontend');
     return mappedSimulations;
   }
 

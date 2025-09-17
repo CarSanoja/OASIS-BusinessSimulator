@@ -64,9 +64,23 @@ interface DashboardViewProps {
 export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator, customSimulations }: DashboardViewProps) {
   const { t } = useTranslation(['dashboard', 'common']);
 
-  // Debug log for custom simulations
-  console.log('🎨 DashboardView received customSimulations:', customSimulations.length, 'simulations');
-  console.log('📋 Custom simulations data:', customSimulations);
+  // Enhanced debug logging for custom simulations
+  console.log('🎨 [DashboardView] Component rendered/re-rendered');
+  console.log('🎨 [DashboardView] Received customSimulations prop:', customSimulations.length, 'simulations');
+  console.log('📋 [DashboardView] Custom simulations data:', customSimulations);
+  console.log('🔍 [DashboardView] customSimulations type:', typeof customSimulations);
+  console.log('🔍 [DashboardView] Is customSimulations array?', Array.isArray(customSimulations));
+
+  // Log each simulation individually
+  customSimulations.forEach((sim, index) => {
+    console.log(`📱 [DashboardView] Simulation ${index + 1}:`, {
+      id: sim.id,
+      title: sim.title,
+      category: sim.category,
+      isPublished: sim.isPublished,
+      createdAt: sim.createdAt
+    });
+  });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');

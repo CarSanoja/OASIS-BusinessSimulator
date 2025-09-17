@@ -63,6 +63,11 @@ interface DashboardViewProps {
 
 export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator, customSimulations }: DashboardViewProps) {
   const { t } = useTranslation(['dashboard', 'common']);
+
+  // Debug log for custom simulations
+  console.log('🎨 DashboardView received customSimulations:', customSimulations.length, 'simulations');
+  console.log('📋 Custom simulations data:', customSimulations);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');

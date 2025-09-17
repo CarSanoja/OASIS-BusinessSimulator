@@ -103,10 +103,17 @@ export default function App() {
   // Load custom simulations from backend
   const loadCustomSimulations = async () => {
     try {
+      console.log('🔍 Loading custom simulations...');
       const simulations = await apiService.getCustomSimulations();
+      console.log('✅ Custom simulations loaded:', simulations.length, 'simulations');
+      console.log('📋 Simulations data:', simulations);
       setCustomSimulations(simulations);
     } catch (error) {
-      console.error('Error loading custom simulations:', error);
+      console.error('❌ Error loading custom simulations:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
+      });
     }
   };
 

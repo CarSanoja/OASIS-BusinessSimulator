@@ -230,9 +230,13 @@ class ApiService {
 
   // Custom Simulations
   async getCustomSimulations(): Promise<CustomSimulation[]> {
+    console.log('🌐 Fetching custom simulations from API...');
     const response = await this.request<{ results: any[] }>('/scenarios/custom-simulations/');
+    console.log('📡 Raw API response:', response);
+    console.log('📊 Found', response.results?.length || 0, 'custom simulations');
+
     // Map backend snake_case to frontend camelCase
-    return response.results.map((sim: any) => ({
+    const mappedSimulations = response.results.map((sim: any) => ({
       id: sim.id.toString(),
       title: sim.title,
       description: sim.description,
@@ -250,6 +254,9 @@ class ApiService {
       createdBy: sim.created_by?.toString() || sim.created_by_name || '',
       createdAt: sim.created_at
     }));
+
+    console.log('🔄 Mapped simulations:', mappedSimulations);
+    return mappedSimulations;
   }
 
   async createCustomSimulation(data: Partial<CustomSimulation>): Promise<CustomSimulation> {

@@ -107,7 +107,6 @@ export function DeepAnalyticsModal({ simulationId, isOpen, onClose }: DeepAnalyt
       const data = await apiService.getDeepAnalytics(simulationId);
       setAnalytics(data);
     } catch (err) {
-      console.error('Error fetching deep analytics:', err);
 
       // Check if it's the insufficient data error
       if (err instanceof Error && err.message.includes('Insufficient conversation data')) {

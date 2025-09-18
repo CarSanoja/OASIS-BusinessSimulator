@@ -88,7 +88,6 @@ export function ScenarioHistoryView({
         setStats(response.stats);
         setError(null);
       } catch (err) {
-        console.error('Error fetching simulation history:', err);
         setError(t('simulation:errorLoadingHistory', { defaultValue: 'Error al cargar el historial de simulaciones' }));
       } finally {
         setLoading(false);

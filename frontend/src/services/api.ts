@@ -93,12 +93,10 @@ class ApiService {
 
   constructor() {
     this.token = localStorage.getItem('access_token') || localStorage.getItem('authToken');
-    console.log('🔧 [ApiService] Constructor - token loaded:', this.token ? 'Present' : 'Missing');
   }
 
   // Method to update token when it changes
   setToken(token: string) {
-    console.log('🔧 [ApiService] setToken called with:', token ? 'New token set' : 'Token cleared');
     this.token = token;
   }
 
@@ -114,11 +112,6 @@ class ApiService {
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
-
-    console.log('🔍 DEBUG: Making request to:', url);
-    console.log('🔍 DEBUG: Request options:', options);
-    console.log('🔍 DEBUG: Request headers:', headers);
-    console.log('🔍 DEBUG: Current token:', this.token ? 'Present' : 'Missing');
 
     try {
       const response = await fetch(url, {
@@ -183,7 +176,7 @@ class ApiService {
         });
       }
     } catch (error) {
-      console.warn('Server logout failed, proceeding with local logout:', error);
+      // Server logout failed, proceeding with local logout
     } finally {
       // Always clear local storage
       this.token = null;
@@ -232,25 +225,15 @@ class ApiService {
 
   // Custom Simulations
   async getCustomSimulations(): Promise<CustomSimulation[]> {
-    console.log('🌐 Fetching custom simulations from API...');
-    console.log('🔑 Current token:', this.token ? 'Present' : 'Missing');
-    console.log('🔗 Request URL will be:', `${this.baseURL}${this.baseURL.endsWith('/api') ? '' : '/api'}/scenarios/custom-simulations/`);
-
     const response = await this.request<{ results: any[] }>('/scenarios/custom-simulations/');
-    console.log('📡 Raw API response:', response);
-    console.log('📊 Found', response.results?.length || 0, 'custom simulations');
-    console.log('🔍 Response results type:', typeof response.results);
-    console.log('🔍 Is results array?', Array.isArray(response.results));
 
     if (!response.results || !Array.isArray(response.results)) {
-      console.error('❌ Invalid response format - results is not an array:', response);
       return [];
     }
 
     // Map backend snake_case to frontend camelCase
-    const mappedSimulations = response.results.map((sim: any, index: number) => {
-      console.log(`🔄 Mapping simulation ${index + 1}:`, sim);
-      const mapped = {
+    const mappedSimulations = response.results.map((sim: any) => {
+      return {
         id: sim.id?.toString() || '',
         title: sim.title || 'Untitled',
         description: sim.description || '',
@@ -268,12 +251,8 @@ class ApiService {
         createdBy: sim.created_by?.toString() || sim.created_by_name || 'Unknown',
         createdAt: sim.created_at || new Date().toISOString()
       };
-      console.log(`✅ Mapped simulation ${index + 1}:`, mapped);
-      return mapped;
     });
 
-    console.log('🔄 All mapped simulations:', mappedSimulations);
-    console.log('📊 Returning', mappedSimulations.length, 'simulations to frontend');
     return mappedSimulations;
   }
 
@@ -303,8 +282,6 @@ class ApiService {
 
   // Simulations
   async createSimulation(data: { scenario?: number; custom_simulation?: number }): Promise<Simulation> {
-    console.log('🔍 DEBUG: createSimulation called with data:', data);
-    console.log('🔍 DEBUG: JSON.stringify(data):', JSON.stringify(data));
     return this.request<Simulation>('/simulations/simulations/', {
       method: 'POST',
       body: JSON.stringify(data),

@@ -63,15 +63,9 @@ export function Header({ user, onLogout, currentView = 'dashboard' }: HeaderProp
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
 
   const changeLanguage = (lng: string) => {
-    console.log('🌐 Language change requested:', { from: i18n.language, to: lng });
     i18n.changeLanguage(lng);
     localStorage.setItem('oasisLanguage', lng);
     setIsLanguageDropdownOpen(false);
-    console.log('✅ Language changed and stored:', {
-      newLanguage: lng,
-      currentLanguage: i18n.language,
-      stored: localStorage.getItem('oasisLanguage')
-    });
   };
 
   return (
@@ -112,7 +106,6 @@ export function Header({ user, onLogout, currentView = 'dashboard' }: HeaderProp
                 size="sm"
                 className="gap-2"
                 onClick={() => {
-                  console.log('🌐 Language selector clicked, current:', i18n.language);
                   setIsLanguageDropdownOpen(!isLanguageDropdownOpen);
                 }}
               >
@@ -126,7 +119,6 @@ export function Header({ user, onLogout, currentView = 'dashboard' }: HeaderProp
                     <button
                       key={language.code}
                       onClick={() => {
-                        console.log(`${language.flag} ${language.name} option clicked`);
                         changeLanguage(language.code);
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center justify-between text-gray-700 hover:text-gray-900"

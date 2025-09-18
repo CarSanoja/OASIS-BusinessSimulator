@@ -54,7 +54,6 @@ interface SimulationViewProps {
 
 export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }: SimulationViewProps) {
   const { t } = useTranslation(['simulation', 'common']);
-  console.log('SimulationView rendering with scenario:', scenario);
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
@@ -88,14 +87,12 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   useEffect(() => {
     const initializeSimulation = async () => {
       try {
-        console.log('Initializing simulation for scenario:', scenario);
         setLoading(true);
 
         // Check if there's an existing active simulation for this scenario
         const storedSimulationId = localStorage.getItem(`simulation_${scenario.id}`);
 
         if (storedSimulationId) {
-          console.log('Found existing simulation ID:', storedSimulationId);
 
           // Try to get existing simulation and messages
           try {
@@ -113,7 +110,6 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
 
             // Fetch existing messages
             const messagesResponse = await apiService.getMessages(parseInt(storedSimulationId));
-            console.log('Fetched existing messages:', messagesResponse);
 
             if (messagesResponse.results && messagesResponse.results.length > 0) {
               // Convert API messages to our format
@@ -139,10 +135,8 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
 
             setError(null);
             setLoadingMessages(false);
-            console.log('Resumed existing simulation successfully');
             return;
           } catch (err) {
-            console.error('Error loading existing simulation, creating new one:', err);
             localStorage.removeItem(`simulation_${scenario.id}`);
             setLoadingMessages(false);
           }
@@ -152,7 +146,6 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
         const newSimulation = await apiService.createSimulation({
           scenario: parseInt(scenario.id)
         });
-        console.log('Created simulation:', newSimulation);
         setSimulation(newSimulation);
 
         // Store simulation ID
@@ -166,17 +159,13 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
           timestamp: new Date(),
           emotion: 'neutral'
         };
-        console.log('Setting welcome message:', welcomeMessage);
         setMessages([welcomeMessage]);
 
         setError(null);
-        console.log('Simulation initialized successfully');
       } catch (err) {
-        console.error('Error initializing simulation:', err);
         setError(err instanceof Error ? err.message : 'Failed to initialize simulation');
       } finally {
         setLoading(false);
-        console.log('Loading set to false');
       }
     };
 
@@ -258,12 +247,10 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
     setIsAiTyping(true);
 
     try {
-      console.log('Sending message to simulation:', simulation.id, 'Content:', messageContent);
       
       // Send message to API and get AI response
       const response = await apiService.sendMessage(simulation.id, messageContent);
       
-      console.log('Received API response:', response);
       
       // Validate response structure
       if (!response || !response.user_message || !response.ai_message) {
@@ -287,12 +274,10 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
         emotion: response.ai_message.emotion
       };
       
-      console.log('Converted messages:', { userMessage, aiMessage });
       
       // Add both user and AI messages to state
       setMessages(prev => {
         const newMessages = [...prev, userMessage, aiMessage];
-        console.log('Updated messages array:', newMessages);
         return newMessages;
       });
       
@@ -323,7 +308,6 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
       }
       
     } catch (err) {
-      console.error('Error sending message:', err);
       setError(err instanceof Error ? err.message : 'Error sending message');
       
       // Add error message
@@ -355,7 +339,6 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
       // Pass the analysis data to the feedback view
       onEndSimulation(messages, duration);
     } catch (err) {
-      console.error('Error ending simulation:', err);
       // Still proceed to feedback view even if API call fails
       const duration = Math.round((currentTime.getTime() - startTime.getTime()) / 1000 / 60);
 
@@ -393,10 +376,8 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
     return 'text-orange-600';
   };
 
-  console.log('Render state:', { loading, loadingMessages, error, messages: messages.length, simulation: !!simulation });
 
   if (loading || loadingMessages) {
-    console.log('Rendering loading state');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="text-center">
@@ -409,7 +390,6 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
   }
 
   if (error) {
-    console.log('Rendering error state:', error);
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
         <div className="text-center">
@@ -423,7 +403,6 @@ export function SimulationView({ scenario, onEndSimulation, onBackToDashboard }:
     );
   }
 
-  console.log('Rendering main simulation view');
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden">

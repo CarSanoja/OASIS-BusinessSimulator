@@ -26,28 +26,22 @@ export function SimulationViewDebug({ scenario, onBackToDashboard }: SimulationV
   const [messages, setMessages] = useState<any[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
 
-  console.log('SimulationViewDebug rendering with scenario:', scenario);
 
   useEffect(() => {
     const initializeSimulation = async () => {
       try {
-        console.log('Initializing simulation for scenario:', scenario);
         setLoading(true);
         
         const newSimulation = await apiService.createSimulation({
           scenario: parseInt(scenario.id)
         });
-        console.log('Created simulation:', newSimulation);
         setSimulation(newSimulation);
         
         setError(null);
-        console.log('Simulation initialized successfully');
       } catch (err) {
-        console.error('Error initializing simulation:', err);
         setError(err instanceof Error ? err.message : 'Failed to initialize simulation');
       } finally {
         setLoading(false);
-        console.log('Loading set to false');
       }
     };
 
@@ -61,23 +55,18 @@ export function SimulationViewDebug({ scenario, onBackToDashboard }: SimulationV
     setCurrentMessage('');
 
     try {
-      console.log('Sending message to simulation:', simulation.id, 'Content:', messageContent);
       
       const response = await apiService.sendMessage(simulation.id, messageContent);
-      console.log('Received API response:', response);
       
       setMessages(prev => [...prev, response.user_message, response.ai_message]);
       
     } catch (err) {
-      console.error('Error sending message:', err);
       setError(err instanceof Error ? err.message : 'Error sending message');
     }
   };
 
-  console.log('Render state:', { loading, error, messages: messages.length, simulation: !!simulation });
 
   if (loading) {
-    console.log('Rendering loading state');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center text-white">
@@ -90,7 +79,6 @@ export function SimulationViewDebug({ scenario, onBackToDashboard }: SimulationV
   }
 
   if (error) {
-    console.log('Rendering error state:', error);
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center text-white">
@@ -104,7 +92,6 @@ export function SimulationViewDebug({ scenario, onBackToDashboard }: SimulationV
     );
   }
 
-  console.log('Rendering main simulation view');
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-8">

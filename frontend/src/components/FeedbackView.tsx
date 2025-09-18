@@ -106,7 +106,6 @@ export function FeedbackView({
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load analysis');
-        console.error('Error loading analysis:', err);
         // Fallback to mock data
         setFeedback(generateFeedbackData());
         setTranscript(messages);

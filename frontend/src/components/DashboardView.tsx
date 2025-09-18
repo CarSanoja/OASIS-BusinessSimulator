@@ -66,21 +66,10 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
   const { t } = useTranslation(['dashboard', 'common']);
 
   // Enhanced debug logging for custom simulations
-  console.log('🎨 [DashboardView] Component rendered/re-rendered');
-  console.log('🎨 [DashboardView] Received customSimulations prop:', customSimulations.length, 'simulations');
-  console.log('📋 [DashboardView] Custom simulations data:', customSimulations);
-  console.log('🔍 [DashboardView] customSimulations type:', typeof customSimulations);
-  console.log('🔍 [DashboardView] Is customSimulations array?', Array.isArray(customSimulations));
 
-  // Log each simulation individually
+  // Process each simulation individually
   customSimulations.forEach((sim, index) => {
-    console.log(`📱 [DashboardView] Simulation ${index + 1}:`, {
-      id: sim.id,
-      title: sim.title,
-      category: sim.category,
-      isPublished: sim.isPublished,
-      createdAt: sim.createdAt
-    });
+    // Individual simulation processing
   });
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -107,7 +96,6 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
 
   // Load data from API
   useEffect(() => {
-    // console.log('🔍 DashboardView useEffect triggered:', {
     //   selectedCategory,
     //   selectedDifficulty,
     //   searchTerm,
@@ -119,13 +107,11 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
 
     // Prevent multiple simultaneous calls
     if (isCallInProgress) {
-      // console.log('⏸️ Skipping API call - call already in progress');
       return;
     }
 
     const loadData = async () => {
       try {
-        // console.log('📡 Starting API calls...');
         setIsCallInProgress(true);
         setLoading(true);
         
@@ -146,9 +132,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
         setCategories(categoriesResponse);
 
         // Load custom simulations (this was missing!)
-        console.log('🔄 [DashboardView] Loading custom simulations...');
         const customSimulationsResponse = await apiService.getCustomSimulations();
-        console.log('✅ [DashboardView] Custom simulations loaded:', customSimulationsResponse.length);
 
         // Store in local state for immediate use
         setLocalCustomSimulations(customSimulationsResponse);
@@ -161,7 +145,6 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
-        console.error('Error loading dashboard data:', err);
       } finally {
         setLoading(false);
         setIsCallInProgress(false);

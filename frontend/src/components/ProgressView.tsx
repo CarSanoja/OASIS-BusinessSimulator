@@ -110,7 +110,6 @@ export function ProgressView({ onBackToDashboard, onStartScenario }: ProgressVie
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : t('progress:failedToLoadData', { defaultValue: 'Failed to load progress data' }));
-        console.error('Error loading progress data:', err);
       } finally {
         setLoading(false);
       }

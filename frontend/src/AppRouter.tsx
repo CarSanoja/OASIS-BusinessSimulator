@@ -49,7 +49,6 @@ export default function AppRouter() {
       setScenariosCache(scenariosResponse.results);
       return scenariosResponse.results;
     } catch (error) {
-      console.error('Error loading scenarios:', error);
       return [];
     } finally {
       setIsLoadingScenarios(false);
@@ -99,7 +98,6 @@ export default function AppRouter() {
       // Call server logout
       await apiService.logout();
     } catch (error) {
-      console.warn('Server logout failed, proceeding with local logout:', error);
     } finally {
       // Always clear local state
       setUser(null);
@@ -118,7 +116,6 @@ export default function AppRouter() {
   };
 
   const handleStartSimulation = async (scenario: Scenario) => {
-    console.log('Starting simulation for scenario:', scenario);
     setSelectedScenario(scenario);
     navigate(`/scenario/${scenario.id}/history`);
   };
@@ -148,7 +145,6 @@ export default function AppRouter() {
         await handleStartSimulation(scenario);
       }
     } catch (error) {
-      console.error('Error loading scenario:', error);
     }
   };
 
@@ -170,12 +166,10 @@ export default function AppRouter() {
         const newSimulation = await apiService.createSimulation({
           scenario: parseInt(selectedScenario.id)
         });
-        console.log('Simulation created:', newSimulation);
         setActiveSimulation(newSimulation);
 
         navigate(`/simulation/${selectedScenario.id}`);
       } catch (err) {
-        console.error('Error creating simulation:', err);
         setError(err instanceof Error ? err.message : 'Error creating simulation');
       }
     }
@@ -251,11 +245,9 @@ export default function AppRouter() {
             if (scenario) {
               setSelectedScenario(scenario);
             } else {
-              console.error('Scenario not found:', scenarioId);
               navigate('/dashboard');
             }
           } catch (error) {
-            console.error('Error loading scenario:', error);
             navigate('/dashboard');
           }
         };
@@ -288,38 +280,25 @@ export default function AppRouter() {
   function SimulationRoute() {
     const { scenarioId } = useParams<{ scenarioId: string }>();
     
-    console.log('SimulationRoute rendered with scenarioId:', scenarioId);
-    console.log('Current selectedScenario:', selectedScenario);
     
     useEffect(() => {
-      console.log('SimulationRoute useEffect triggered');
       // If we don't have the selected scenario, load it
       if (!selectedScenario || selectedScenario.id.toString() !== scenarioId) {
-        console.log('Loading scenario because:', { 
-          selectedScenario: !!selectedScenario, 
-          selectedScenarioId: selectedScenario?.id,
-          scenarioId: scenarioId,
-          idMatch: selectedScenario?.id === scenarioId 
-        });
         const loadScenario = async () => {
           try {
             const scenario = await findScenarioById(scenarioId!);
             if (scenario) {
-              console.log('Found scenario:', scenario);
               setSelectedScenario(scenario);
             } else {
-              console.error('Scenario not found:', scenarioId);
               navigate('/dashboard');
             }
           } catch (error) {
-            console.error('Error loading scenario:', error);
             navigate('/dashboard');
           }
         };
         
         loadScenario();
       } else {
-        console.log('Scenario already loaded, skipping load');
       }
     }, [scenarioId, navigate, selectedScenario]);
 
@@ -355,7 +334,6 @@ export default function AppRouter() {
             setSelectedScenario(scenario);
           }
         } catch (error) {
-          console.error('Error loading scenario:', error);
           navigate('/dashboard');
         }
       };

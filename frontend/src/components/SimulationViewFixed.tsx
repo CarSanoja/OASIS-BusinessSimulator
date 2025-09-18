@@ -49,7 +49,6 @@ interface SimulationViewProps {
 }
 
 export function SimulationView({ scenario, simulation: propSimulation, onEndSimulation, onBackToDashboard }: SimulationViewProps) {
-  console.log('SimulationView rendering with scenario:', scenario);
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentMessage, setCurrentMessage] = useState('');
@@ -79,9 +78,6 @@ export function SimulationView({ scenario, simulation: propSimulation, onEndSimu
 
   // Initialize simulation and load messages
   useEffect(() => {
-    console.log('SimulationView useEffect - initializing simulation');
-    console.log('Prop simulation:', propSimulation);
-    console.log('Local simulation state:', simulation);
     
     const initializeSimulation = async () => {
       try {
@@ -91,13 +87,10 @@ export function SimulationView({ scenario, simulation: propSimulation, onEndSimu
         let simToUse = propSimulation;
         
         if (!simToUse) {
-          console.log('Creating new simulation for scenario:', scenario.id);
           simToUse = await apiService.createSimulation({
             scenario: parseInt(scenario.id)
           });
-          console.log('Simulation created:', simToUse);
         } else {
-          console.log('Using existing simulation:', simToUse);
         }
         
         setSimulation(simToUse);
@@ -107,7 +100,6 @@ export function SimulationView({ scenario, simulation: propSimulation, onEndSimu
         
         setLoading(false);
       } catch (err) {
-        console.error('Error creating simulation:', err);
         setError(err instanceof Error ? err.message : 'Error creating simulation');
         setLoading(false);
       }
@@ -145,7 +137,6 @@ export function SimulationView({ scenario, simulation: propSimulation, onEndSimu
       setHasMoreMessages(response.pagination.has_next);
       setCurrentPage(page);
     } catch (err) {
-      console.error('Error loading messages:', err);
     } finally {
       setLoadingMoreMessages(false);
     }
@@ -200,9 +191,7 @@ export function SimulationView({ scenario, simulation: propSimulation, onEndSimu
     setIsAiTyping(true);
 
     try {
-      console.log('Sending message to simulation:', simulation.id, 'Content:', messageContent);
       const response = await apiService.sendMessage(simulation.id, messageContent);
-      console.log('Received API response:', response);
       
       if (!response || !response.user_message || !response.ai_message) {
         throw new Error('Invalid API response structure');
@@ -223,10 +212,8 @@ export function SimulationView({ scenario, simulation: propSimulation, onEndSimu
         emotion: response.ai_message.emotion
       };
       
-      console.log('Converted messages:', { userMessage, aiMessage });
       setMessages(prev => {
         const newMessages = [...prev, userMessage, aiMessage];
-        console.log('Updated messages array:', newMessages);
         return newMessages;
       });
 
@@ -243,7 +230,6 @@ export function SimulationView({ scenario, simulation: propSimulation, onEndSimu
       setStrategicAlignment(prev => Math.max(0, Math.min(100, prev + (Math.random() - 0.5) * 15)));
 
     } catch (err) {
-      console.error('Error sending message:', err);
       setError(err instanceof Error ? err.message : 'Error sending message');
       
       // Create error message
@@ -268,7 +254,6 @@ export function SimulationView({ scenario, simulation: propSimulation, onEndSimu
       await apiService.endSimulation(simulation.id);
       onEndSimulation(messages, duration);
     } catch (err) {
-      console.error('Error ending simulation:', err);
       // Still end the simulation locally
       const duration = Math.floor((Date.now() - startTime.getTime()) / 1000);
       onEndSimulation(messages, duration);
@@ -305,7 +290,6 @@ export function SimulationView({ scenario, simulation: propSimulation, onEndSimu
     );
   }
 
-  console.log('Rendering main simulation view');
 
   return (
     <div className="h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 flex flex-col">

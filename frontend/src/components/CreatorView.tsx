@@ -282,7 +282,6 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
 
       return createdSimulation.id;
     } catch (error) {
-      console.error('Error saving simulation:', error);
       alert(t('creator:saveError', { defaultValue: 'Error al guardar la simulación. Por favor, intenta de nuevo.' }));
       return null;
     }
@@ -301,7 +300,6 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
       setTestMessage('');
       setTestResponse(null);
     } catch (error) {
-      console.error('Error initiating test:', error);
       alert(t('creator:testError', { defaultValue: 'Error al iniciar la prueba. Por favor, intenta de nuevo.' }));
     }
   };
@@ -315,7 +313,6 @@ export function CreatorView({ onBackToDashboard, onSimulationCreated }: CreatorV
       setTestResponse(response);
       setTestMessage('');
     } catch (error) {
-      console.error('Error sending test message:', error);
       alert(t('creator:testMessageError', { defaultValue: 'Error al enviar el mensaje de prueba.' }));
     } finally {
       setIsTestLoading(false);

@@ -101,7 +101,6 @@ export function LiveMetricsPanel({ simulationId, onViewDeepAnalytics, onRefresh 
         setError(null);
         setLastUpdate(new Date());
       } catch (err) {
-        console.error('Error fetching live metrics:', err);
         setError(err instanceof Error ? err.message : t('metrics:errorFetchingMetrics', { defaultValue: 'Error fetching metrics' }));
       } finally {
         setLoading(false);

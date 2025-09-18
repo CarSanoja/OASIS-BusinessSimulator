@@ -102,27 +102,16 @@ export default function App() {
 
   // Track customSimulations state changes
   useEffect(() => {
-    console.log('🎯 [App.tsx] customSimulations state changed:', customSimulations.length, 'simulations');
-    console.log('📊 [App.tsx] Current customSimulations:', customSimulations);
   }, [customSimulations]);
 
   // Load custom simulations from backend
   const loadCustomSimulations = async () => {
     try {
-      console.log('🔍 [App.tsx] Starting to load custom simulations...');
-      console.log('🔍 [App.tsx] Current user:', user);
-      console.log('🔍 [App.tsx] Auth token from localStorage:', localStorage.getItem('access_token') || localStorage.getItem('authToken'));
 
       const simulations = await apiService.getCustomSimulations();
-      console.log('✅ [App.tsx] Custom simulations loaded from API:', simulations.length, 'simulations');
-      console.log('📋 [App.tsx] Raw simulations data:', simulations);
 
-      console.log('🔄 [App.tsx] Setting customSimulations state...');
       setCustomSimulations(simulations);
-      console.log('✅ [App.tsx] customSimulations state updated');
     } catch (error) {
-      console.error('❌ [App.tsx] Error loading custom simulations:', error);
-      console.error('🔍 [App.tsx] Error details:', {
         message: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : 'No stack trace',
         type: typeof error,
@@ -147,7 +136,6 @@ export default function App() {
       // Call API logout to invalidate tokens
       await apiService.logout();
     } catch (error) {
-      console.error('Logout API call failed:', error);
     }
     
     // Clear local state and storage

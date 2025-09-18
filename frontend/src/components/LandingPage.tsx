@@ -45,7 +45,6 @@ export function LandingPage({ onLogin }: LandingPageProps) {
       });
       
     } catch (error) {
-      console.error('Login failed:', error);
       alert(t('auth:authError'));
     } finally {
       setIsLoading(false);

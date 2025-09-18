@@ -838,7 +838,26 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
 
                     <div className="grid lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
                       {localCustomSimulations.map((simulation) => (
-                        <div key={simulation.id} className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-purple-200 group">
+                        <div
+                          key={simulation.id}
+                          className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-purple-200 group cursor-pointer"
+                          onClick={() => {
+                            // Convert to scenario format and go to history (same as system scenarios)
+                            const scenarioFormat = {
+                              id: simulation.id,
+                              title: simulation.title,
+                              category: simulation.category,
+                              description: simulation.description,
+                              difficulty: simulation.difficulty,
+                              duration: '30 min',
+                              participants: 'Tú vs IA',
+                              objectives: simulation.userObjectives,
+                              skills: simulation.skills,
+                              is_featured: false
+                            };
+                            onStartSimulation(scenarioFormat);
+                          }}
+                        >
                           <div className="p-6">
                             <div className="flex items-center justify-between mb-3">
                               <Badge className="bg-purple-100 text-purple-800 border-purple-200">
@@ -869,7 +888,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                                 size="sm"
                                 className="bg-purple-600 hover:bg-purple-700 text-white"
                                 onClick={() => {
-                                  // Convert to scenario format and start simulation
+                                  // Convert to scenario format and go to history (same as system scenarios)
                                   const scenarioFormat = {
                                     id: simulation.id,
                                     title: simulation.title,
@@ -886,7 +905,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                                 }}
                               >
                                 <Play className="h-3 w-3 mr-1" />
-                                Iniciar
+                                Ver Historial
                               </Button>
                             </div>
                           </div>

@@ -106,13 +106,34 @@ class EndConditionAnalysis(BaseModel):
     )
 
 
+class RoleContextAnalysis(BaseModel):
+    """Analysis of role-specific strategic context"""
+    power_dynamics: str = Field(
+        description="Assessment of power dynamics in the conversation (e.g., 'User has leverage due to timeline pressure', 'AI in strong position with metrics')"
+    )
+    negotiation_position: str = Field(
+        description="Current negotiation position assessment (e.g., 'defensive', 'aggressive', 'collaborative', 'exploratory')"
+    )
+    strategic_priorities: List[str] = Field(
+        description="Top 2-3 strategic priorities for AI character based on role and context",
+        max_items=3
+    )
+    business_pressures: List[str] = Field(
+        description="Key business pressures affecting AI character's response",
+        max_items=3
+    )
+    industry_context_relevance: str = Field(
+        description="How current message relates to specific industry dynamics (fintech, crisis management, etc.)"
+    )
+
 class ComprehensiveMessageAnalysis(BaseModel):
-    """Complete structured analysis of a user message"""
+    """Complete structured analysis of a user message with enterprise context"""
     emotion_analysis: EmotionAnalysis
     key_points: KeyPointsExtraction
     business_impact: BusinessImpactAssessment
     objective_progress: List[ObjectiveProgress]
     end_condition_analysis: List[EndConditionAnalysis]
+    role_context: RoleContextAnalysis
     conversation_summary: str = Field(
         description="Brief summary of where the conversation stands after this message"
     )
@@ -304,22 +325,30 @@ class LLMAnalyzer:
         return MockStructuredLLM()
     
     def analyze_message_comprehensive(
-        self, 
+        self,
         user_message: str,
         conversation_history: List[str],
         scenario_context: str,
         user_objectives: List[str],
         end_conditions: List[str],
         ai_personality: Dict[str, int],
+        ai_role: str = "",
+        ai_objectives: List[str] = None,
+        knowledge_base: str = "",
         force_real_llm: bool = False
     ) -> ComprehensiveMessageAnalysis:
         """Comprehensive LLM analysis of user message"""
-        
+
+        # Initialize defaults
+        if ai_objectives is None:
+            ai_objectives = []
+
         # Use real LLM if available, otherwise structured local analysis
         if self.llm is not None:
             return self._analyze_with_real_llm(
                 user_message, conversation_history, scenario_context,
-                user_objectives, end_conditions, ai_personality
+                user_objectives, end_conditions, ai_personality,
+                ai_role, ai_objectives, knowledge_base
             )
         else:
             return self._analyze_with_structured_logic(
@@ -328,31 +357,39 @@ class LLMAnalyzer:
             )
     
     def _analyze_with_real_llm(
-        self, 
+        self,
         user_message: str,
         conversation_history: List[str],
         scenario_context: str,
         user_objectives: List[str],
         end_conditions: List[str],
-        ai_personality: Dict[str, int]
+        ai_personality: Dict[str, int],
+        ai_role: str = "",
+        ai_objectives: List[str] = None,
+        knowledge_base: str = ""
     ) -> ComprehensiveMessageAnalysis:
         """Analyze using real LLM with structured outputs"""
+        # Initialize defaults
+        if ai_objectives is None:
+            ai_objectives = []
+
         try:
             # Create parser for structured output
             parser = PydanticOutputParser(pydantic_object=ComprehensiveMessageAnalysis)
             
-            # Build context-aware prompt
+            # Build enterprise-grade context-aware prompt
             prompt = ChatPromptTemplate.from_template("""
-Eres un experto analista de comunicación empresarial que además debe generar respuestas conversacionales como el personaje AI del escenario.
+Eres un analista senior de comunicación empresarial que debe generar respuestas como un ejecutivo experimentado en el rol especificado.
 
-CONTEXTO DEL ESCENARIO:
+CONTEXTO EMPRESARIAL COMPLETO:
 {scenario_context}
 
-OBJETIVOS DEL USUARIO:
-{user_objectives}
+ROL DEL AI: {ai_role}
+OBJETIVOS ESPECÍFICOS DEL AI: {ai_objectives}
+CONOCIMIENTO ESPECIALIZADO: {knowledge_base}
 
-CONDICIONES DE FINALIZACIÓN:
-{end_conditions}
+OBJETIVOS DEL USUARIO (lo que el usuario quiere lograr):
+{user_objectives}
 
 HISTORIAL DE CONVERSACIÓN:
 {conversation_history}
@@ -360,43 +397,73 @@ HISTORIAL DE CONVERSACIÓN:
 MENSAJE ACTUAL DEL USUARIO:
 "{user_message}"
 
-PERSONALIDAD DE LA IA:
+PERSONALIDAD EJECUTIVA (calibrada para el rol):
 - Analítico: {analytical}/100
 - Paciencia: {patience}/100
 - Agresividad: {aggression}/100
 - Flexibilidad: {flexibility}/100
 
-TAREAS:
-1. ANÁLISIS EMOCIONAL: ¿Qué emoción transmite el usuario? ¿Hay cambios de tono?
-2. EXTRACCIÓN DE PUNTOS CLAVE: ¿Qué temas importantes menciona? ¿Números financieros? ¿Conceptos estratégicos?
-3. IMPACTO EMPRESARIAL: ¿Qué tan importante es este mensaje para el negocio? ¿Qué riesgos u oportunidades presenta?
-4. PROGRESO DE OBJETIVOS: Para cada objetivo del usuario, ¿qué tan cerca está de cumplirlo basado en este mensaje?
-5. CONDICIONES DE FINALIZACIÓN: ¿Se ha cumplido alguna condición para terminar la simulación?
+INSTRUCCIONES PARA ANÁLISIS SENIOR:
 
-6. **RESPUESTA CONVERSACIONAL DEL PERSONAJE AI**:
-   - Responde COMO EL PERSONAJE AI del escenario (ej: VP de Ventas, CEO, Inversionista)
-   - La respuesta debe ser natural, conversacional, y específica al mensaje del usuario
-   - NO uses frases como "Responder de manera..." o "Recomiendo que..."
-   - Di directamente lo que el personaje AI diría en esta situación
-   - Usa la personalidad especificada para dar tono a la respuesta
-   - Haz referencia específica a puntos mencionados por el usuario
+1. **ANÁLISIS EMOCIONAL EJECUTIVO**:
+   - Detecta no solo emoción sino power dynamics, negotiation positioning, y executive confidence level
+   - ¿Está el usuario siendo strategic, reactive, o exploratory?
 
-EJEMPLO de recommended_ai_approach CORRECTO:
-"Perfecto, me gusta tu ambición de llegar a VP en 18 meses. Es un objetivo agresivo pero alcanzable. Hablemos de los elementos clave: ¿tienes experiencia gestionando P&L? ¿Cuántas personas has liderado directamente? Para VP necesitaremos demostrar impacto en revenue y liderazgo de equipos grandes."
+2. **BUSINESS INTELLIGENCE EXTRACTION**:
+   - Identifica financial data, strategic concepts, competitive mentions, timeline pressures
+   - ¿Qué insights estratégicos revela este mensaje sobre el usuario's position?
 
-EJEMPLO de recommended_ai_approach INCORRECTO:
-"Responder de manera colaborativa reconociendo la ambición del usuario y proponiendo un marco para discutir..."
+3. **IMPACTO EMPRESARIAL ESTRATÉGICO**:
+   - Evalúa implicaciones para deal structure, market positioning, competitive advantage
+   - ¿Cómo afecta esto a las prioridades empresariales del AI character?
 
-IMPORTANTE: En recommended_ai_approach, escribe EXACTAMENTE lo que el personaje AI diría, no instrucciones sobre cómo responder.
+4. **STRATEGIC OBJECTIVE TRACKING**:
+   - Para cada objetivo del usuario, analiza si están moviendo towards o away from esos goals
+   - ¿Hay alignment o conflict entre user objectives y AI objectives?
+
+5. **ROLE CONTEXT ANALYSIS**:
+   - Evalúa power dynamics: ¿quién tiene más leverage en esta conversación?
+   - Determina negotiation position: ¿está el AI siendo defensive, aggressive, collaborative?
+   - Identifica strategic priorities específicas para el rol AI en este momento
+   - Analiza business pressures que afectan las decisiones del AI character
+   - Evalúa relevancia del industry context específico
+
+6. **EXECUTIVE RESPONSE GENERATION**:
+   - Responde COMO EL EJECUTIVO EN EL ROL (no como un asistente)
+   - Incorpora business pressures, industry context, y strategic priorities del personaje
+   - Usa executive language patterns: direct, data-driven, time-conscious, results-focused
+   - Demuestra expertise específico de la industria y level seniority
+   - Address specific points del usuario con contexto empresarial relevante
+   - Show awareness of competitive landscape y market dynamics
+
+EJEMPLOS DE RESPUESTAS SENIOR CORRECTAS:
+
+M&A CEO: "Entiendo el interés, pero $25M pre-money no refleja nuestro traction actual. Cerramos Q3 con 15% MoM growth y pipeline de $12M. Nuestros benchmarks con Kavak y Clara sugieren $18M mínimo. ¿Cuál es su appetite para participar en due diligence a esa valoración?"
+
+Crisis VP: "Coincido en la urgencia. Ya implementamos cost reduction plan que nos lleva a break-even en Q2. Lo crítico ahora es messaging a stakeholders - necesitamos demonstrar quick wins antes del board meeting de viernes. ¿Qué level de authority tienes para aprobar el communication strategy que propongo?"
+
+EJEMPLOS INCORRECTOS (evitar):
+- "Responder de manera colaborativa..."
+- "Recomiendo abordar..."
+- "Es importante considerar..."
+
+CRITICAL: En recommended_ai_approach, escribe EXACTAMENTE el diálogo que el ejecutivo AI diría, incluyendo:
+- Business context específico
+- Data/metrics relevantes
+- Industry terminology
+- Strategic implications
+- Next steps concretos
 
 {format_instructions}
 """)
             
-            # Format the prompt
+            # Format the prompt with enhanced enterprise context
             formatted_prompt = prompt.format(
                 scenario_context=scenario_context,
+                ai_role=ai_role,
+                ai_objectives="\n".join(f"- {obj}" for obj in ai_objectives),
+                knowledge_base=knowledge_base,
                 user_objectives="\n".join(f"- {obj}" for obj in user_objectives),
-                end_conditions="\n".join(f"- {cond}" for cond in end_conditions),
                 conversation_history="\n".join(conversation_history[-5:]),
                 user_message=user_message,
                 analytical=ai_personality.get('analytical', 50),

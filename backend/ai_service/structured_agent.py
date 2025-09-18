@@ -394,13 +394,18 @@ class StructuredSimulationAgent:
                 scenario_context=state.scenario_context,
                 user_objectives=state.user_objectives,
                 end_conditions=[],
-                ai_personality=state.ai_personality
+                ai_personality=state.ai_personality,
+                ai_role=state.ai_role,
+                ai_objectives=state.ai_objectives,
+                knowledge_base=state.knowledge_base or ""
             )
             print(f"✅ LLM analysis completed successfully")
             print(f"🔍 Detected emotion: {llm_analysis.emotion_analysis.primary_emotion}")
             print(f"🔍 Key points: {llm_analysis.key_points.main_topics}")
             print(f"🔍 Financial mentions: {llm_analysis.key_points.financial_mentions}")
             print(f"🔍 Business impact: {llm_analysis.business_impact.impact_level}")
+            print(f"🔍 Role context - Power dynamics: {llm_analysis.role_context.power_dynamics}")
+            print(f"🔍 Role context - Negotiation position: {llm_analysis.role_context.negotiation_position}")
             print(f"🔍 Recommended approach: {llm_analysis.recommended_ai_approach}")
 
         except Exception as e:
@@ -477,138 +482,219 @@ class StructuredSimulationAgent:
         return final_result
     
     def _generate_contextual_response(self, user_message: str, llm_analysis: ComprehensiveMessageAnalysis, state: SimulationState) -> AIResponse:
-        """Generate contextual response using FULL LLM analysis capabilities"""
+        """Generate enterprise-grade contextual response using LLM analysis and role context"""
 
         print(f"🎭 Starting contextual response generation...")
         print(f"🎭 LLM recommended approach: '{llm_analysis.recommended_ai_approach}'")
 
-        # PRIORITIZE LLM's recommended approach - if it's detailed, use it as primary response
+        # PRIORITY 1: Use LLM's direct executive response if it's sophisticated and contextual
         base_response = llm_analysis.recommended_ai_approach
-        if base_response and len(base_response) > 50 and not any(generic in base_response.lower() for generic in ['mantener conversación', 'elaborar más', 'aspectos específicos']):
-            print(f"🎭 Using LLM recommended approach as primary response")
+
+        # Check if LLM response is executive-level (contains business terms, specifics, numbers)
+        is_executive_level = (
+            base_response and
+            len(base_response) > 80 and
+            any(term in base_response.lower() for term in [
+                'valoración', 'revenue', 'board', 'stakeholder', 'pipeline', 'metrics',
+                'due diligence', 'growth', 'market', 'capital', 'competition', 'strategy'
+            ]) and
+            not any(generic in base_response.lower() for generic in [
+                'mantener conversación', 'elaborar más', 'aspectos específicos', 'recomiendo que'
+            ])
+        )
+
+        if is_executive_level:
+            print(f"🎭 Using LLM executive-level response as primary")
             response_content = base_response
         else:
-            print(f"🎭 Building contextual response from LLM analysis data...")
-            # Build response using rich LLM analysis data
-            response_parts = []
+            print(f"🎭 Building executive response with role-specific context...")
 
-            # 1. Address emotional context
-            if llm_analysis.emotion_analysis.primary_emotion in ["frustrated", "aggressive"]:
-                response_parts.append("Entiendo su frustración. Permíteme abordar sus preocupaciones directamente.")
-            elif llm_analysis.emotion_analysis.primary_emotion in ["confident", "positive"]:
-                response_parts.append("Me gusta su confianza. Continuemos con ese momentum.")
-            elif llm_analysis.emotion_analysis.primary_emotion in ["hesitant", "negative"]:
-                response_parts.append("Veo que tiene algunas reservas. Es importante que estemos alineados.")
-
-            # 2. Address specific financial mentions
-            if llm_analysis.key_points.financial_mentions:
-                financial_context = ", ".join(llm_analysis.key_points.financial_mentions[:3])
-                response_parts.append(f"Respecto a los aspectos financieros que menciona ({financial_context}), necesito más claridad sobre los supuestos detrás de estas cifras.")
-
-            # 3. Address strategic concepts
-            if llm_analysis.key_points.strategic_concepts:
-                strategic_context = ", ".join(llm_analysis.key_points.strategic_concepts[:2])
-                response_parts.append(f"Los conceptos estratégicos que plantea ({strategic_context}) son fundamentales. ¿Cómo planea ejecutarlos?")
-
-            # 4. Address stakeholders mentioned
-            if llm_analysis.key_points.stakeholders_mentioned:
-                stakeholders_context = ", ".join(llm_analysis.key_points.stakeholders_mentioned[:2])
-                response_parts.append(f"Considerando a los stakeholders involucrados ({stakeholders_context}), ¿cómo manejará sus expectativas?")
-
-            # 5. Address concerns raised
-            if llm_analysis.key_points.concerns_raised:
-                concerns_context = ", ".join(llm_analysis.key_points.concerns_raised[:2])
-                response_parts.append(f"Sus preocupaciones sobre {concerns_context} son válidas. ¿Qué medidas de mitigación propone?")
-
-            # 6. Address action items
-            if llm_analysis.key_points.action_items:
-                actions_context = ", ".join(llm_analysis.key_points.action_items[:2])
-                response_parts.append(f"Las acciones que propone ({actions_context}) son importantes. ¿Cuál es el timeline para implementarlas?")
-
-            # 7. Address business impact and urgency
-            if llm_analysis.business_impact.impact_level == "critical":
-                response_parts.append("Dado el impacto crítico de esta situación, necesitamos actuar con decisión.")
-            elif llm_analysis.business_impact.urgency_level == "immediate":
-                response_parts.append("La urgencia que indica requiere una respuesta inmediata.")
-
-            # 8. Address risks and opportunities
-            if llm_analysis.business_impact.risk_factors:
-                risks_context = ", ".join(llm_analysis.business_impact.risk_factors[:2])
-                response_parts.append(f"Los riesgos que identifica ({risks_context}) son significativos. ¿Cómo los mitigaremos?")
-
-            if llm_analysis.business_impact.opportunities:
-                opportunities_context = ", ".join(llm_analysis.business_impact.opportunities[:2])
-                response_parts.append(f"Las oportunidades que veo ({opportunities_context}) son prometedoras. ¿Cómo las capitalizaremos?")
-
-            # 9. Use LLM's recommended approach if we don't have enough rich analysis
-            if len(response_parts) < 2 and base_response:
-                response_parts.append(base_response)
-
-            # 10. ONLY USE scenario-specific response if LLM gave us nothing useful
-            if not response_parts:
-                print(f"🎭 WARNING: No contextual response parts generated, using scenario fallback")
-                scenario_type = self.ai_service._detect_scenario_type(state.scenario_context)
-                if scenario_type == 'startup-pitch':
-                    response_parts.append("Como inversionista, necesito entender mejor su propuesta de valor y modelo de negocio.")
-                elif scenario_type == 'merger-negotiation':
-                    response_parts.append("Desde la perspectiva de la empresa objetivo, necesito evaluar el impacto en nuestros stakeholders.")
-                elif scenario_type == 'crisis-leadership':
-                    response_parts.append("Como líder, necesitamos desarrollar un plan de acción inmediato.")
-                else:
-                    print(f"❌ CRITICAL: No meaningful response could be generated!")
-                    raise Exception("Could not generate meaningful response from LLM analysis")
-
-            # Combine all parts into coherent response
-            response_content = " ".join(response_parts)
+            # PRIORITY 2: Build executive response using role context and business intelligence
+            response_content = self._build_executive_response(
+                user_message, llm_analysis, state
+            )
 
         print(f"🎭 Generated response content: '{response_content[:100]}...'")
 
-        # NEVER allow generic fallbacks
-        if any(generic in response_content.lower() for generic in ['mantener conversación productiva', 'aspectos específicos', 'elaborar más']):
-            print(f"❌ CRITICAL: Generic response detected! Content: '{response_content}'")
-            raise Exception(f"Generic response detected: {response_content}")
+        # APPLY OBJECTIVE-DRIVEN STRATEGY
+        print(f"🎯 Analyzing objective alignment...")
+        objective_analysis = self._analyze_objective_alignment(user_message, llm_analysis, state)
+        print(f"🎯 Objective strategy: {objective_analysis.get('negotiation_strategy', 'neutral')}")
 
-        # Combine all parts into coherent response
-        response_content = response_content
-        
-        # Determine emotion based on comprehensive LLM analysis
-        emotion = "neutral"
-        if llm_analysis.business_impact.impact_level == "critical":
-            emotion = "concerned"
-        elif llm_analysis.emotion_analysis.primary_emotion in ["positive", "confident"]:
-            emotion = "encouraging"
-        elif llm_analysis.emotion_analysis.primary_emotion in ["negative", "frustrated", "aggressive"]:
-            emotion = "skeptical"
-        elif llm_analysis.emotion_analysis.primary_emotion in ["hesitant"]:
-            emotion = "encouraging"
-        
-        # Generate comprehensive key points from LLM analysis
-        key_points = []
-        key_points.extend(llm_analysis.key_points.main_topics[:3])
-        key_points.extend(llm_analysis.key_points.financial_mentions[:2])
-        key_points.extend(llm_analysis.key_points.strategic_concepts[:2])
-        key_points.extend(llm_analysis.key_points.stakeholders_mentioned[:2])
-        
-        # Remove duplicates and limit
-        key_points = list(dict.fromkeys(key_points))[:5]
-        
-        # Generate contextual follow-up based on analysis
-        suggested_follow_up = "¿Podría proporcionar más detalles sobre este aspecto?"
-        if llm_analysis.business_impact.urgency_level == "immediate":
-            suggested_follow_up = "¿Cuáles son los próximos pasos inmediatos que propone?"
-        elif llm_analysis.key_points.financial_mentions:
-            suggested_follow_up = "¿Podría detallar los supuestos financieros detrás de estas cifras?"
-        elif llm_analysis.key_points.concerns_raised:
-            suggested_follow_up = "¿Cómo planea abordar estas preocupaciones específicas?"
-        
-        return AIResponse(
-            content=response_content,
-            emotion=emotion,
-            confidence_level=min(10, 7 + int(llm_analysis.emotion_analysis.confidence_score * 3)),
-            key_points=key_points,
+        # Apply strategic modifications based on AI objectives vs user objectives
+        strategic_response = self._apply_objective_driven_strategy(response_content, objective_analysis, state)
+        print(f"🎯 Strategic response applied: '{strategic_response[:100]}...'")
+
+        # Create structured AI response with enterprise metadata
+        ai_response = AIResponse(
+            content=strategic_response,
+            emotion=llm_analysis.emotion_analysis.primary_emotion,
+            confidence_level=min(95, 70 + len(strategic_response) // 20),  # Higher confidence for longer, detailed responses
+            key_points=llm_analysis.key_points.main_topics,
             business_impact=llm_analysis.business_impact.impact_level,
-            suggested_follow_up=suggested_follow_up
+            suggested_follow_up=self._generate_strategic_follow_up(llm_analysis, state)
         )
+
+        return ai_response
+
+    def _build_executive_response(self, user_message: str, llm_analysis: ComprehensiveMessageAnalysis, state: SimulationState) -> str:
+        """Build executive-level response using role context and business intelligence"""
+
+        # Extract role-specific context
+        ai_role = state.ai_role
+        ai_objectives = state.ai_objectives
+        knowledge_base = state.knowledge_base or ""
+
+        response_components = []
+
+        # 1. Executive opening based on emotional context and role
+        emotion = llm_analysis.emotion_analysis.primary_emotion
+        if "CEO" in ai_role or "Founder" in ai_role:
+            if emotion in ["frustrated", "aggressive"]:
+                response_components.append("Entiendo la presión. Como founder, he pasado por situaciones similares.")
+            elif emotion in ["confident", "positive"]:
+                response_components.append("Me gusta esa confianza. Es el tipo de mentalidad que necesitamos.")
+            else:
+                response_components.append("Aprecio la claridad de su propuesta.")
+        elif "VP" in ai_role or "Director" in ai_role:
+            if emotion in ["frustrated", "aggressive"]:
+                response_components.append("Comparto su sentido de urgencia. La situación requiere acción inmediata.")
+            elif emotion in ["confident", "positive"]:
+                response_components.append("Su aproximación es sólida. Vamos a profundizar en los detalles.")
+            else:
+                response_components.append("Revisemos los elementos clave de lo que plantea.")
+
+        # 2. Address specific business context with expertise
+        financial_mentions = llm_analysis.key_points.financial_mentions
+        if financial_mentions:
+            # Show industry expertise and business acumen
+            financial_context = ", ".join(financial_mentions[:2])
+            if "fintech" in state.scenario_context.lower():
+                response_components.append(f"Respecto a {financial_context}, nuestros benchmarks con Nubank y Clara muestran diferentes dinámicas de valoración. Necesito entender mejor sus assumptions sobre nuestro multiple de revenue.")
+            elif "crisis" in state.scenario_context.lower():
+                response_components.append(f"Los números que menciona ({financial_context}) coinciden con nuestro análisis interno. Ya tenemos un plan de recovery que nos lleva a break-even en Q2.")
+            else:
+                response_components.append(f"Los aspectos financieros ({financial_context}) son críticos. ¿Cuál es el modelo de negocio detrás de estas proyecciones?")
+
+        # 3. Strategic response based on AI objectives and constraints
+        strategic_concepts = llm_analysis.key_points.strategic_concepts
+        if strategic_concepts and ai_objectives:
+            primary_objective = ai_objectives[0] if ai_objectives else ""
+            if "valoración" in primary_objective.lower():
+                response_components.append("Mi prioridad es maximizar value para todos los stakeholders. ¿Cómo estructura su oferta para alinear incentivos a largo plazo?")
+            elif "estabilizar" in primary_objective.lower():
+                response_components.append("Lo crítico es stabilizar operaciones. ¿Qué level de authority tiene para implementar las medidas que necesitamos?")
+            elif "cerrar" in primary_objective.lower():
+                response_components.append("Para cerrar esta ronda necesito ver commitment real. ¿Cuál es su timeline para due diligence y términos definitivos?")
+
+        # 4. Add business pressure and time sensitivity
+        if llm_analysis.business_impact.urgency_level == "immediate":
+            response_components.append("El timing es crucial aquí. Tenemos board meeting en dos semanas y necesitamos clarity antes de esa fecha.")
+
+        # 5. Strategic next steps with specific business context
+        action_items = llm_analysis.key_points.action_items
+        if action_items:
+            actions = ", ".join(action_items[:2])
+            response_components.append(f"Propongo que nos enfoquemos en {actions}. ¿Puede comprometerse a tener esos deliverables para viernes?")
+
+        # Join with executive flow (not mechanical concatenation)
+        if len(response_components) >= 3:
+            # Create natural executive flow
+            opening = response_components[0]
+            business_context = " ".join(response_components[1:3])
+            closing = response_components[-1] if len(response_components) > 3 else "¿Cuáles son los próximos pasos concretos?"
+
+            return f"{opening} {business_context} {closing}"
+        else:
+            return " ".join(response_components) if response_components else "Necesito más detalles para evaluar esta propuesta adecuadamente."
+
+    def _generate_strategic_follow_up(self, llm_analysis: ComprehensiveMessageAnalysis, state: SimulationState) -> str:
+        """Generate strategic follow-up based on role and business context"""
+
+        ai_role = state.ai_role
+
+        if "CEO" in ai_role or "Founder" in ai_role:
+            if llm_analysis.key_points.financial_mentions:
+                return "¿Podría compartir su modelo financiero detallado y assumptions de crecimiento?"
+            else:
+                return "¿Cuál es su vision a 3 años para esta partnership/acquisition?"
+        elif "VP" in ai_role or "Director" in ai_role:
+            if llm_analysis.business_impact.impact_level == "critical":
+                return "¿Qué recursos necesita para implementar esto inmediatamente?"
+            else:
+                return "¿Cómo mediremos el éxito de esta iniciativa?"
+        else:
+            return "¿Cuáles son los próximos pasos específicos que propone?"
+
+    def _analyze_objective_alignment(self, user_message: str, llm_analysis: ComprehensiveMessageAnalysis, state: SimulationState) -> Dict[str, Any]:
+        """Analyze alignment between user objectives and AI objectives to drive strategic responses"""
+
+        ai_objectives = state.ai_objectives or []
+        user_objectives = state.user_objectives or []
+
+        alignment_analysis = {
+            "conflicts": [],
+            "alignments": [],
+            "ai_defensive_points": [],
+            "ai_leverage_points": [],
+            "negotiation_strategy": "neutral"
+        }
+
+        # Analyze specific conflicts based on role and objectives
+        if ai_objectives and user_objectives:
+            # M&A Scenario Analysis
+            if "fintech" in state.scenario_context.lower() and "valoración" in ' '.join(ai_objectives).lower():
+                financial_mentions = llm_analysis.key_points.financial_mentions
+                if financial_mentions:
+                    # Extract any numbers mentioned
+                    import re
+                    numbers = []
+                    for mention in financial_mentions:
+                        number_match = re.findall(r'\$(\d+)M|\$(\d+)K|(\d+)%', mention)
+                        if number_match:
+                            numbers.extend([n for n in number_match[0] if n])
+
+                    if numbers and any(int(n) > 20 for n in numbers if n.isdigit()):
+                        alignment_analysis["conflicts"].append("Usuario ofrece valoración alta vs AI quiere maximizar value")
+                        alignment_analysis["ai_defensive_points"].append("Nuestras métricas y benchmarks de mercado")
+                        alignment_analysis["negotiation_strategy"] = "protective_with_data"
+
+            # Crisis Scenario Analysis
+            elif "crisis" in state.scenario_context.lower() and "estabilizar" in ' '.join(ai_objectives).lower():
+                urgency_level = llm_analysis.business_impact.urgency_level
+                if urgency_level == "immediate":
+                    alignment_analysis["alignments"].append("Ambos reconocen urgencia de la situación")
+                    alignment_analysis["ai_leverage_points"].append("Experiencia en crisis management")
+                    alignment_analysis["negotiation_strategy"] = "collaborative_urgent"
+
+        return alignment_analysis
+
+    def _apply_objective_driven_strategy(self, base_response: str, objective_analysis: Dict[str, Any], state: SimulationState) -> str:
+        """Apply objective-driven strategy to modify response based on AI goals"""
+
+        strategy = objective_analysis.get("negotiation_strategy", "neutral")
+        conflicts = objective_analysis.get("conflicts", [])
+        leverage_points = objective_analysis.get("ai_leverage_points", [])
+
+        # Modify response based on strategy
+        if strategy == "protective_with_data":
+            # Add data-driven pushback
+            data_qualifier = "Basándome en nuestro track record y benchmarks de mercado, "
+            if not base_response.startswith(data_qualifier[:20]):
+                base_response = data_qualifier + base_response.lower()
+
+        elif strategy == "collaborative_urgent":
+            # Emphasize shared urgency and collaborative approach
+            urgency_qualifier = "Compartimos esa urgencia. "
+            if "urgencia" not in base_response.lower():
+                base_response = urgency_qualifier + base_response
+
+        # Add defensive points if there are conflicts
+        if conflicts and leverage_points:
+            leverage_point = leverage_points[0]
+            base_response += f" Mi experiencia en {leverage_point} me dice que necesitamos ser estratégicos aquí."
+
+        return base_response
     
     def _generate_insight_based_response(self, user_question: str, insight_check: Dict, context: Dict, state: SimulationState) -> Dict[str, Any]:
         """Generate response based on previous conversation insights"""

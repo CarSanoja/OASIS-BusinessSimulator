@@ -19,6 +19,118 @@ from .metrics_service import live_metrics_service
 import random
 
 
+# Senior-level business role definitions with industry context
+SCENARIO_ROLE_DEFINITIONS = {
+    1: {  # M&A Fintech
+        "ai_role": "CEO/Fundador de startup fintech latinoamericana en proceso de levantamiento Serie B",
+        "ai_personality_override": {
+            "analytical": 85,
+            "patience": 40,  # Urgency for funding
+            "aggression": 60,  # Protective of company value
+            "flexibility": 55
+        },
+        "ai_motivations": [
+            "Maximizar valoración para shareholders y empleados",
+            "Proteger autonomía operacional y cultural de la empresa",
+            "Asegurar continuidad del equipo técnico clave",
+            "Mantener roadmap de producto sin disrupciones"
+        ],
+        "ai_constraints": [
+            "Burn rate de $400K/mes con runway de 8 meses",
+            "Presión del board para cerrar ronda antes de Q4",
+            "Competencia agresiva de fintechs brasileñas",
+            "Regulación LATAM compleja en 3 países"
+        ],
+        "business_context": {
+            "industry": "Fintech LATAM",
+            "stage": "Serie B growth stage",
+            "key_metrics": ["ARR: $4.2M", "Growth: 15% MoM", "CAC: $180", "LTV: $2,400"],
+            "competitive_landscape": "Competencia directa con Nubank, Kavak, Clara",
+            "regulatory_environment": "Multi-country compliance: México, Colombia, Argentina"
+        },
+        "strategic_priorities": [
+            "Acelerar expansión geográfica a Brasil",
+            "Construir moat defensivo a través de datos propietarios",
+            "Optimizar unit economics antes de scale",
+            "Desarrollar partnerships estratégicos con bancos tradicionales"
+        ],
+        "negotiation_style": "Data-driven, protective, values team retention and strategic autonomy"
+    },
+
+    2: {  # Crisis Leadership
+        "ai_role": "VP de Operaciones enfrentando crisis reputacional con caída del 40% en ventas",
+        "ai_personality_override": {
+            "analytical": 90,
+            "patience": 25,  # Crisis urgency
+            "aggression": 70,  # Defensive mode
+            "flexibility": 45   # Limited options
+        },
+        "ai_motivations": [
+            "Estabilizar operaciones y detener sangrado de revenue",
+            "Proteger empleos y mantener moral del equipo",
+            "Recuperar confianza de stakeholders clave",
+            "Preservar posición competitiva a largo plazo"
+        ],
+        "ai_constraints": [
+            "Cash flow negativo por 3 meses consecutivos",
+            "Presión mediática constante y narrativa negativa",
+            "Board considera cambios en leadership",
+            "Clientes clave renegociando contratos o cancelando"
+        ],
+        "business_context": {
+            "industry": "Corporate en crisis",
+            "stage": "Turnaround/Recovery",
+            "key_metrics": ["Revenue down 40%", "Churn rate: 25%", "EBITDA: -15%", "Cash runway: 6 months"],
+            "crisis_type": "Reputational crisis + operational performance decline",
+            "stakeholders": "Employees, customers, board, media, suppliers, investors"
+        },
+        "strategic_priorities": [
+            "Implementar plan de comunicación de crisis",
+            "Ejecutar quick wins para demostrar recovery",
+            "Reestructurar operaciones para cost efficiency",
+            "Rebuild stakeholder confidence through transparency"
+        ],
+        "negotiation_style": "Urgent, defensive, focused on immediate action and results"
+    },
+
+    3: {  # Startup Pitch
+        "ai_role": "Founder/CEO de startup edtech presentando Serie A a inversionistas VCs",
+        "ai_personality_override": {
+            "analytical": 75,
+            "patience": 60,
+            "aggression": 45,  # Confident but not pushy
+            "flexibility": 70
+        },
+        "ai_motivations": [
+            "Cerrar Serie A de $8M para acelerar growth",
+            "Encontrar investor con strategic value-add",
+            "Validar product-market fit con capital institucional",
+            "Escalar equipo de engineering y sales"
+        ],
+        "ai_constraints": [
+            "Runway de 4 meses, necesita cierre rápido",
+            "Competencia con edtechs US/Europe por talento",
+            "Métricas tempranas pero tracción prometedora",
+            "Market education requerida para categoría nueva"
+        ],
+        "business_context": {
+            "industry": "EdTech B2B",
+            "stage": "Serie A fundraising",
+            "key_metrics": ["ARR: $800K", "Growth: 25% MoM", "NPS: 72", "Gross margins: 85%"],
+            "target_market": "Universities LATAM + online education platforms",
+            "competitive_advantage": "AI-powered adaptive learning engine"
+        },
+        "strategic_priorities": [
+            "Scale customer acquisition en universidades",
+            "Desarrollar partnerships con platforms educativas",
+            "Internacionalizar a US market",
+            "Build defensible data moat through usage patterns"
+        ],
+        "negotiation_style": "Visionary, data-driven, collaborative, seeks strategic partnership"
+    }
+}
+
+
 class SimulationViewSet(viewsets.ModelViewSet):
     serializer_class = SimulationSerializer
     permission_classes = [IsAuthenticated]
@@ -210,20 +322,50 @@ class SimulationViewSet(viewsets.ModelViewSet):
             else:
                 messages.append(f"AI: {msg.content}")
         
-        # Get simulation context
+        # Get simulation context with senior-level role definitions
         if simulation.scenario:
-            scenario_context = simulation.scenario.description
-            ai_personality = {
+            scenario_id = simulation.scenario.id
+            role_def = SCENARIO_ROLE_DEFINITIONS.get(scenario_id, {})
+
+            # Enhanced scenario context with business intelligence
+            base_context = simulation.scenario.description
+            business_context = role_def.get('business_context', {})
+            strategic_priorities = role_def.get('strategic_priorities', [])
+            constraints = role_def.get('ai_constraints', [])
+
+            scenario_context = f"""
+{base_context}
+
+CONTEXTO EMPRESARIAL:
+- Industria: {business_context.get('industry', 'Corporativo')}
+- Etapa: {business_context.get('stage', 'Operacional')}
+- Métricas clave: {', '.join(business_context.get('key_metrics', []))}
+- Landscape competitivo: {business_context.get('competitive_landscape', 'Mercado competitivo')}
+
+PRESIONES Y CONSTRAINTS ACTUALES:
+{chr(10).join(f"- {constraint}" for constraint in constraints)}
+
+PRIORIDADES ESTRATÉGICAS:
+{chr(10).join(f"- {priority}" for priority in strategic_priorities)}
+"""
+
+            # AI role with full business context
+            ai_role = role_def.get('ai_role', f"Profesional experimentado en {simulation.scenario.category}")
+            ai_personality = role_def.get('ai_personality_override', {
                 'analytical': 50,
-                'patience': 50, 
+                'patience': 50,
                 'aggression': 30,
                 'flexibility': 50
-            }
-            ai_objectives = ["Mantener una conversación profesional y educativa"]
+            })
+
+            # AI motivations as objectives (what AI wants to achieve)
+            ai_motivations = role_def.get('ai_motivations', ["Mantener una conversación profesional y educativa"])
+            ai_objectives = ai_motivations
+
+            # User objectives remain from scenario
             user_objectives = simulation.scenario.objectives
-            ai_role = f"Profesional experimentado en {simulation.scenario.category}"
-            user_role = "Participante del escenario de aprendizaje"
-            knowledge_base = None
+            user_role = "Executive/Decision-maker en proceso de negociación empresarial"
+            knowledge_base = f"Negociation style: {role_def.get('negotiation_style', 'Professional')}"
         else:
             custom_sim = simulation.custom_simulation
             scenario_context = custom_sim.description

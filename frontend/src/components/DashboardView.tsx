@@ -91,6 +91,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [featuredScenarios, setFeaturedScenarios] = useState<Scenario[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [localCustomSimulations, setLocalCustomSimulations] = useState<CustomSimulation[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCallInProgress, setIsCallInProgress] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,6 +149,9 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
         console.log('🔄 [DashboardView] Loading custom simulations...');
         const customSimulationsResponse = await apiService.getCustomSimulations();
         console.log('✅ [DashboardView] Custom simulations loaded:', customSimulationsResponse.length);
+
+        // Store in local state for immediate use
+        setLocalCustomSimulations(customSimulationsResponse);
 
         // Update parent state if callback provided
         if (onCustomSimulationsLoaded) {
@@ -818,8 +822,90 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                 </Button>
               </div>
             ) : (
-              <div className="grid lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
-                {filteredScenarios.map((scenario, index) => (
+              <div className="space-y-12">
+                {/* Custom Simulations Section - Most Important! */}
+                {localCustomSimulations.length > 0 && (
+                  <div className="space-y-6">
+                    <div className="text-center">
+                      <h4 className="text-xl font-bold text-purple-900 mb-2 flex items-center justify-center gap-2">
+                        <Sparkles className="h-5 w-5 text-purple-500" />
+                        🎨 {t('dashboard:customSimulations', { defaultValue: 'Tus Simulaciones Personalizadas' })}
+                      </h4>
+                      <p className="text-purple-700 text-sm">
+                        {localCustomSimulations.length} simulacion{localCustomSimulations.length === 1 ? '' : 'es'} creada{localCustomSimulations.length === 1 ? '' : 's'} por ti
+                      </p>
+                    </div>
+
+                    <div className="grid lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+                      {localCustomSimulations.map((simulation) => (
+                        <div key={simulation.id} className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border-2 border-purple-200 group">
+                          <div className="p-6">
+                            <div className="flex items-center justify-between mb-3">
+                              <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+                                {simulation.category}
+                              </Badge>
+                              <Badge variant="outline" className={
+                                simulation.difficulty === 'Avanzado' ? 'border-red-200 text-red-700' :
+                                simulation.difficulty === 'Intermedio' ? 'border-yellow-200 text-yellow-700' :
+                                'border-green-200 text-green-700'
+                              }>
+                                {simulation.difficulty}
+                              </Badge>
+                            </div>
+
+                            <h5 className="font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-purple-700 transition-colors">
+                              {simulation.title}
+                            </h5>
+
+                            <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                              {simulation.description}
+                            </p>
+
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs text-purple-600">
+                                Por {simulation.createdBy}
+                              </div>
+                              <Button
+                                size="sm"
+                                className="bg-purple-600 hover:bg-purple-700 text-white"
+                                onClick={() => {
+                                  // Convert to scenario format and start simulation
+                                  const scenarioFormat = {
+                                    id: simulation.id,
+                                    title: simulation.title,
+                                    category: simulation.category,
+                                    description: simulation.description,
+                                    difficulty: simulation.difficulty,
+                                    duration: '30 min',
+                                    participants: 'Tú vs IA',
+                                    objectives: simulation.userObjectives,
+                                    skills: simulation.skills,
+                                    is_featured: false
+                                  };
+                                  onStartSimulation(scenarioFormat);
+                                }}
+                              >
+                                <Play className="h-3 w-3 mr-1" />
+                                Iniciar
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-200 pt-8">
+                      <h4 className="text-xl font-bold text-gray-900 mb-4 text-center">
+                        📚 Simulaciones del Sistema
+                      </h4>
+                    </div>
+                  </div>
+                )}
+
+                {/* Regular Scenarios Grid */}
+                <div className="grid lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
+                  {filteredScenarios.map((scenario, index) => (
                   <div key={scenario.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100 group">
                     <div className="relative h-48 overflow-hidden">
                       <ImageWithFallback
@@ -898,6 +984,7 @@ export function DashboardView({ onStartSimulation, onViewProgress, onViewCreator
                     </div>
                   </div>
                 ))}
+                </div>
               </div>
             )}
           </div>

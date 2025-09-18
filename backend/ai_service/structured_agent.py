@@ -360,38 +360,34 @@ class StructuredSimulationAgent:
     
     def process_message(self, state: SimulationState, simulation_obj=None) -> Dict[str, Any]:
         """Process a message using LLM analysis with conversation memory"""
-        try:
-            # Get last user message
-            last_user_message = ""
-            for msg in reversed(state.messages):
-                if msg.startswith('User:'):
-                    last_user_message = msg[5:]
-                    break
-            
-            if not last_user_message:
-                return self._fallback_response()
-            
-            # Get conversation context from memory (if available)
-            conversation_context = {}
-            if simulation_obj:
+        # Get last user message
+        last_user_message = ""
+        for msg in reversed(state.messages):
+            if msg.startswith('User:'):
+                last_user_message = msg[5:]
+                break
+
+        if not last_user_message:
+            print("❌ ERROR: No user message found in conversation history")
+            raise ValueError("No user message found in conversation history")
+
+        print(f"🔍 Processing user message: '{last_user_message}'")
+        print(f"🔍 Scenario context: {state.scenario_context[:100]}...")
+        print(f"🔍 User objectives: {state.user_objectives}")
+
+        # Get conversation context from memory (if available)
+        conversation_context = {}
+        if simulation_obj:
+            try:
                 conversation_context = conversation_memory.get_conversation_context(simulation_obj)
-                
-                # TEMPORARILY DISABLED: Check if user is asking about previous insights
-                # This was causing responses to be based on previous conversations instead of current message
-                # insight_check = conversation_memory.can_ai_answer_about_insights(
-                #     simulation_obj, last_user_message
-                # )
-                # 
-                # if insight_check['can_answer']:
-                #     # Generate response based on previous insights
-                #     return self._generate_insight_based_response(
-                #         last_user_message, 
-                #         insight_check, 
-                #         conversation_context,
-                #         state
-                #     )
-            
-            # Use LLM for comprehensive analysis
+                print(f"🔍 Conversation context loaded: {len(conversation_context)} items")
+            except Exception as e:
+                print(f"⚠️ Warning: Could not load conversation context: {e}")
+                conversation_context = {}
+
+        # Use LLM for comprehensive analysis - NO FALLBACKS HERE
+        print("🤖 Calling LLM analyzer for comprehensive analysis...")
+        try:
             llm_analysis = llm_analyzer.analyze_message_comprehensive(
                 user_message=last_user_message,
                 conversation_history=state.messages,
@@ -400,123 +396,180 @@ class StructuredSimulationAgent:
                 end_conditions=[],
                 ai_personality=state.ai_personality
             )
-            
-            # Generate contextual response based on LLM analysis instead of templates
+            print(f"✅ LLM analysis completed successfully")
+            print(f"🔍 Detected emotion: {llm_analysis.emotion_analysis.primary_emotion}")
+            print(f"🔍 Key points: {llm_analysis.key_points.main_topics}")
+            print(f"🔍 Financial mentions: {llm_analysis.key_points.financial_mentions}")
+            print(f"🔍 Business impact: {llm_analysis.business_impact.impact_level}")
+            print(f"🔍 Recommended approach: {llm_analysis.recommended_ai_approach}")
+
+        except Exception as e:
+            print(f"❌ CRITICAL ERROR: LLM analysis failed completely: {e}")
+            import traceback
+            traceback.print_exc()
+            raise Exception(f"LLM analysis failed: {e}")
+
+        # Generate contextual response based on LLM analysis instead of templates
+        print("🎭 Generating contextual response...")
+        try:
             contextual_response = self._generate_contextual_response(
-                last_user_message, 
-                llm_analysis, 
+                last_user_message,
+                llm_analysis,
                 state
             )
-            
-            # Enhance response with conversation context
-            if conversation_context:
+            print(f"✅ Contextual response generated: '{contextual_response.content[:100]}...'")
+
+        except Exception as e:
+            print(f"❌ ERROR: Failed to generate contextual response: {e}")
+            import traceback
+            traceback.print_exc()
+            raise Exception(f"Failed to generate contextual response: {e}")
+
+        # Enhance response with conversation context
+        if conversation_context:
+            try:
                 contextual_response = self._enhance_with_conversation_context(
                     contextual_response, conversation_context, llm_analysis
                 )
-            
-            # Use LLM analysis to enhance the response
+                print("✅ Response enhanced with conversation context")
+            except Exception as e:
+                print(f"⚠️ Warning: Could not enhance with conversation context: {e}")
+
+        # Use LLM analysis to enhance the response
+        try:
             enhanced_response = self._enhance_response_with_llm_analysis(
-                contextual_response, 
+                contextual_response,
                 llm_analysis
             )
-            
-            # Convert objective progress from LLM analysis
-            objective_progress = {}
+            print(f"✅ Response enhanced with LLM analysis")
+
+        except Exception as e:
+            print(f"❌ ERROR: Failed to enhance response with LLM analysis: {e}")
+            import traceback
+            traceback.print_exc()
+            raise Exception(f"Failed to enhance response with LLM analysis: {e}")
+
+        # Convert objective progress from LLM analysis
+        objective_progress = {}
+        try:
             for obj_progress in llm_analysis.objective_progress:
                 if obj_progress.is_fully_completed:
                     objective_progress[obj_progress.objective_text] = True
-            
-            return {
-                "response": enhanced_response.content,
-                "emotion": llm_analysis.emotion_analysis.primary_emotion,
-                "confidence_level": enhanced_response.confidence_level,
-                "key_points": llm_analysis.key_points.main_topics,
-                "business_impact": llm_analysis.business_impact.impact_level,
-                "suggested_follow_up": enhanced_response.suggested_follow_up,
-                "objective_progress": objective_progress,
-                "llm_analysis": llm_analysis,  # Store complete analysis for persistence
-                "conversation_context": conversation_context
-            }
-            
+            print(f"✅ Objective progress calculated: {objective_progress}")
+
         except Exception as e:
-            print(f"LLM processing error: {e}")
-            return self._fallback_response()
+            print(f"⚠️ Warning: Could not calculate objective progress: {e}")
+            objective_progress = {}
+
+        final_result = {
+            "response": enhanced_response.content,
+            "emotion": llm_analysis.emotion_analysis.primary_emotion,
+            "confidence_level": enhanced_response.confidence_level,
+            "key_points": llm_analysis.key_points.main_topics,
+            "business_impact": llm_analysis.business_impact.impact_level,
+            "suggested_follow_up": enhanced_response.suggested_follow_up,
+            "objective_progress": objective_progress,
+            "llm_analysis": llm_analysis,  # Store complete analysis for persistence
+            "conversation_context": conversation_context
+        }
+
+        print(f"🎉 Final response generated successfully: '{final_result['response'][:100]}...'")
+        return final_result
     
     def _generate_contextual_response(self, user_message: str, llm_analysis: ComprehensiveMessageAnalysis, state: SimulationState) -> AIResponse:
         """Generate contextual response using FULL LLM analysis capabilities"""
-        
-        # Use the LLM's recommended approach as the foundation
+
+        print(f"🎭 Starting contextual response generation...")
+        print(f"🎭 LLM recommended approach: '{llm_analysis.recommended_ai_approach}'")
+
+        # PRIORITIZE LLM's recommended approach - if it's detailed, use it as primary response
         base_response = llm_analysis.recommended_ai_approach
-        
-        # Build response using rich LLM analysis data
-        response_parts = []
-        
-        # 1. Address emotional context
-        if llm_analysis.emotion_analysis.primary_emotion in ["frustrated", "aggressive"]:
-            response_parts.append("Entiendo su frustración. Permíteme abordar sus preocupaciones directamente.")
-        elif llm_analysis.emotion_analysis.primary_emotion in ["confident", "positive"]:
-            response_parts.append("Me gusta su confianza. Continuemos con ese momentum.")
-        elif llm_analysis.emotion_analysis.primary_emotion in ["hesitant", "negative"]:
-            response_parts.append("Veo que tiene algunas reservas. Es importante que estemos alineados.")
-        
-        # 2. Address specific financial mentions
-        if llm_analysis.key_points.financial_mentions:
-            financial_context = ", ".join(llm_analysis.key_points.financial_mentions[:3])
-            response_parts.append(f"Respecto a los aspectos financieros que menciona ({financial_context}), necesito más claridad sobre los supuestos detrás de estas cifras.")
-        
-        # 3. Address strategic concepts
-        if llm_analysis.key_points.strategic_concepts:
-            strategic_context = ", ".join(llm_analysis.key_points.strategic_concepts[:2])
-            response_parts.append(f"Los conceptos estratégicos que plantea ({strategic_context}) son fundamentales. ¿Cómo planea ejecutarlos?")
-        
-        # 4. Address stakeholders mentioned
-        if llm_analysis.key_points.stakeholders_mentioned:
-            stakeholders_context = ", ".join(llm_analysis.key_points.stakeholders_mentioned[:2])
-            response_parts.append(f"Considerando a los stakeholders involucrados ({stakeholders_context}), ¿cómo manejará sus expectativas?")
-        
-        # 5. Address concerns raised
-        if llm_analysis.key_points.concerns_raised:
-            concerns_context = ", ".join(llm_analysis.key_points.concerns_raised[:2])
-            response_parts.append(f"Sus preocupaciones sobre {concerns_context} son válidas. ¿Qué medidas de mitigación propone?")
-        
-        # 6. Address action items
-        if llm_analysis.key_points.action_items:
-            actions_context = ", ".join(llm_analysis.key_points.action_items[:2])
-            response_parts.append(f"Las acciones que propone ({actions_context}) son importantes. ¿Cuál es el timeline para implementarlas?")
-        
-        # 7. Address business impact and urgency
-        if llm_analysis.business_impact.impact_level == "critical":
-            response_parts.append("Dado el impacto crítico de esta situación, necesitamos actuar con decisión.")
-        elif llm_analysis.business_impact.urgency_level == "immediate":
-            response_parts.append("La urgencia que indica requiere una respuesta inmediata.")
-        
-        # 8. Address risks and opportunities
-        if llm_analysis.business_impact.risk_factors:
-            risks_context = ", ".join(llm_analysis.business_impact.risk_factors[:2])
-            response_parts.append(f"Los riesgos que identifica ({risks_context}) son significativos. ¿Cómo los mitigaremos?")
-        
-        if llm_analysis.business_impact.opportunities:
-            opportunities_context = ", ".join(llm_analysis.business_impact.opportunities[:2])
-            response_parts.append(f"Las oportunidades que veo ({opportunities_context}) son prometedoras. ¿Cómo las capitalizaremos?")
-        
-        # 9. Use LLM's recommended approach if we have rich analysis
-        if base_response and len(response_parts) < 3:
-            response_parts.append(base_response)
-        
-        # 10. Fallback to scenario-specific response if no rich analysis
-        if not response_parts:
-            scenario_type = self.ai_service._detect_scenario_type(state.scenario_context)
-            if scenario_type == 'startup-pitch':
-                response_parts.append("Como inversionista, necesito entender mejor su propuesta de valor y modelo de negocio.")
-            elif scenario_type == 'merger-negotiation':
-                response_parts.append("Desde la perspectiva de la empresa objetivo, necesito evaluar el impacto en nuestros stakeholders.")
-            elif scenario_type == 'crisis-leadership':
-                response_parts.append("Como líder, necesitamos desarrollar un plan de acción inmediato.")
-            else:
-                response_parts.append("¿Podría elaborar más sobre los aspectos específicos que considera más importantes?")
-        
+        if base_response and len(base_response) > 50 and not any(generic in base_response.lower() for generic in ['mantener conversación', 'elaborar más', 'aspectos específicos']):
+            print(f"🎭 Using LLM recommended approach as primary response")
+            response_content = base_response
+        else:
+            print(f"🎭 Building contextual response from LLM analysis data...")
+            # Build response using rich LLM analysis data
+            response_parts = []
+
+            # 1. Address emotional context
+            if llm_analysis.emotion_analysis.primary_emotion in ["frustrated", "aggressive"]:
+                response_parts.append("Entiendo su frustración. Permíteme abordar sus preocupaciones directamente.")
+            elif llm_analysis.emotion_analysis.primary_emotion in ["confident", "positive"]:
+                response_parts.append("Me gusta su confianza. Continuemos con ese momentum.")
+            elif llm_analysis.emotion_analysis.primary_emotion in ["hesitant", "negative"]:
+                response_parts.append("Veo que tiene algunas reservas. Es importante que estemos alineados.")
+
+            # 2. Address specific financial mentions
+            if llm_analysis.key_points.financial_mentions:
+                financial_context = ", ".join(llm_analysis.key_points.financial_mentions[:3])
+                response_parts.append(f"Respecto a los aspectos financieros que menciona ({financial_context}), necesito más claridad sobre los supuestos detrás de estas cifras.")
+
+            # 3. Address strategic concepts
+            if llm_analysis.key_points.strategic_concepts:
+                strategic_context = ", ".join(llm_analysis.key_points.strategic_concepts[:2])
+                response_parts.append(f"Los conceptos estratégicos que plantea ({strategic_context}) son fundamentales. ¿Cómo planea ejecutarlos?")
+
+            # 4. Address stakeholders mentioned
+            if llm_analysis.key_points.stakeholders_mentioned:
+                stakeholders_context = ", ".join(llm_analysis.key_points.stakeholders_mentioned[:2])
+                response_parts.append(f"Considerando a los stakeholders involucrados ({stakeholders_context}), ¿cómo manejará sus expectativas?")
+
+            # 5. Address concerns raised
+            if llm_analysis.key_points.concerns_raised:
+                concerns_context = ", ".join(llm_analysis.key_points.concerns_raised[:2])
+                response_parts.append(f"Sus preocupaciones sobre {concerns_context} son válidas. ¿Qué medidas de mitigación propone?")
+
+            # 6. Address action items
+            if llm_analysis.key_points.action_items:
+                actions_context = ", ".join(llm_analysis.key_points.action_items[:2])
+                response_parts.append(f"Las acciones que propone ({actions_context}) son importantes. ¿Cuál es el timeline para implementarlas?")
+
+            # 7. Address business impact and urgency
+            if llm_analysis.business_impact.impact_level == "critical":
+                response_parts.append("Dado el impacto crítico de esta situación, necesitamos actuar con decisión.")
+            elif llm_analysis.business_impact.urgency_level == "immediate":
+                response_parts.append("La urgencia que indica requiere una respuesta inmediata.")
+
+            # 8. Address risks and opportunities
+            if llm_analysis.business_impact.risk_factors:
+                risks_context = ", ".join(llm_analysis.business_impact.risk_factors[:2])
+                response_parts.append(f"Los riesgos que identifica ({risks_context}) son significativos. ¿Cómo los mitigaremos?")
+
+            if llm_analysis.business_impact.opportunities:
+                opportunities_context = ", ".join(llm_analysis.business_impact.opportunities[:2])
+                response_parts.append(f"Las oportunidades que veo ({opportunities_context}) son prometedoras. ¿Cómo las capitalizaremos?")
+
+            # 9. Use LLM's recommended approach if we don't have enough rich analysis
+            if len(response_parts) < 2 and base_response:
+                response_parts.append(base_response)
+
+            # 10. ONLY USE scenario-specific response if LLM gave us nothing useful
+            if not response_parts:
+                print(f"🎭 WARNING: No contextual response parts generated, using scenario fallback")
+                scenario_type = self.ai_service._detect_scenario_type(state.scenario_context)
+                if scenario_type == 'startup-pitch':
+                    response_parts.append("Como inversionista, necesito entender mejor su propuesta de valor y modelo de negocio.")
+                elif scenario_type == 'merger-negotiation':
+                    response_parts.append("Desde la perspectiva de la empresa objetivo, necesito evaluar el impacto en nuestros stakeholders.")
+                elif scenario_type == 'crisis-leadership':
+                    response_parts.append("Como líder, necesitamos desarrollar un plan de acción inmediato.")
+                else:
+                    print(f"❌ CRITICAL: No meaningful response could be generated!")
+                    raise Exception("Could not generate meaningful response from LLM analysis")
+
+            # Combine all parts into coherent response
+            response_content = " ".join(response_parts)
+
+        print(f"🎭 Generated response content: '{response_content[:100]}...'")
+
+        # NEVER allow generic fallbacks
+        if any(generic in response_content.lower() for generic in ['mantener conversación productiva', 'aspectos específicos', 'elaborar más']):
+            print(f"❌ CRITICAL: Generic response detected! Content: '{response_content}'")
+            raise Exception(f"Generic response detected: {response_content}")
+
         # Combine all parts into coherent response
-        response_content = " ".join(response_parts)
+        response_content = response_content
         
         # Determine emotion based on comprehensive LLM analysis
         emotion = "neutral"
@@ -723,26 +776,8 @@ class StructuredSimulationAgent:
         return base_response
     
     def _fallback_response(self) -> Dict[str, Any]:
-        """Fallback response if LLM analysis fails"""
-        return {
-            "response": "Disculpe, podría repetir su propuesta? Me gustaría entender mejor su perspectiva.",
-            "emotion": "neutral",
-            "confidence_level": 5,
-            "key_points": ["clarificación", "comprensión"],
-            "business_impact": "medium",
-            "objective_progress": {},
-            "llm_analysis": {
-                "financial_mentions": [],
-                "strategic_concepts": [],
-                "stakeholders_mentioned": [],
-                "action_items": [],
-                "concerns_raised": [],
-                "risk_factors": [],
-                "opportunities": [],
-                "urgency_level": "medium",
-                "conversation_summary": "Análisis básico aplicado"
-            }
-        }
+        """NO MORE FALLBACKS - raise exceptions instead"""
+        raise Exception("CRITICAL: System attempted to use fallback response. This should never happen.")
     
     def generate_analysis(self, messages: List[str], duration_minutes: int) -> Dict[str, Any]:
         """Generate structured simulation analysis"""

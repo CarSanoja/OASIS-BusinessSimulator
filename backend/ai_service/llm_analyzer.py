@@ -117,7 +117,7 @@ class ComprehensiveMessageAnalysis(BaseModel):
         description="Brief summary of where the conversation stands after this message"
     )
     recommended_ai_approach: str = Field(
-        description="Recommended approach for the AI's next response"
+        description="EXACT conversational response the AI character should give (not instructions about how to respond)"
     )
 
 
@@ -343,8 +343,7 @@ class LLMAnalyzer:
             
             # Build context-aware prompt
             prompt = ChatPromptTemplate.from_template("""
-Eres un experto analista de comunicación empresarial especializado en simulaciones de liderazgo ejecutivo. 
-Tu tarea es analizar el mensaje del usuario con precisión objetiva, no basándote en keywords sino en comprensión contextual profunda.
+Eres un experto analista de comunicación empresarial que además debe generar respuestas conversacionales como el personaje AI del escenario.
 
 CONTEXTO DEL ESCENARIO:
 {scenario_context}
@@ -361,30 +360,34 @@ HISTORIAL DE CONVERSACIÓN:
 MENSAJE ACTUAL DEL USUARIO:
 "{user_message}"
 
-PERSONALIDAD DE LA IA (para entender el contexto):
+PERSONALIDAD DE LA IA:
 - Analítico: {analytical}/100
-- Paciencia: {patience}/100  
+- Paciencia: {patience}/100
 - Agresividad: {aggression}/100
-
-INSTRUCCIONES CRÍTICAS:
-1. NO uses keyword matching. Analiza el SIGNIFICADO real del mensaje.
-2. Para emociones: evalúa el tono, contexto y intención, no solo palabras específicas.
-3. Para key points financieros: identifica TODOS los números, métricas, y conceptos económicos mencionados.
-4. Para análisis de impacto: considera las implicaciones estratégicas reales, no solo urgencia aparente.
-5. Para objetivos: evalúa el PROGRESO REAL hacia las metas, considerando el contexto completo.
-
 - Flexibilidad: {flexibility}/100
 
-Analiza este mensaje de manera comprehensiva y estructurada:
-
+TAREAS:
 1. ANÁLISIS EMOCIONAL: ¿Qué emoción transmite el usuario? ¿Hay cambios de tono?
 2. EXTRACCIÓN DE PUNTOS CLAVE: ¿Qué temas importantes menciona? ¿Números financieros? ¿Conceptos estratégicos?
 3. IMPACTO EMPRESARIAL: ¿Qué tan importante es este mensaje para el negocio? ¿Qué riesgos u oportunidades presenta?
 4. PROGRESO DE OBJETIVOS: Para cada objetivo del usuario, ¿qué tan cerca está de cumplirlo basado en este mensaje?
 5. CONDICIONES DE FINALIZACIÓN: ¿Se ha cumplido alguna condición para terminar la simulación?
-6. RECOMENDACIÓN: ¿Cómo debería responder la IA considerando su personalidad?
 
-IMPORTANTE: Responde ÚNICAMENTE con el JSON estructurado solicitado.
+6. **RESPUESTA CONVERSACIONAL DEL PERSONAJE AI**:
+   - Responde COMO EL PERSONAJE AI del escenario (ej: VP de Ventas, CEO, Inversionista)
+   - La respuesta debe ser natural, conversacional, y específica al mensaje del usuario
+   - NO uses frases como "Responder de manera..." o "Recomiendo que..."
+   - Di directamente lo que el personaje AI diría en esta situación
+   - Usa la personalidad especificada para dar tono a la respuesta
+   - Haz referencia específica a puntos mencionados por el usuario
+
+EJEMPLO de recommended_ai_approach CORRECTO:
+"Perfecto, me gusta tu ambición de llegar a VP en 18 meses. Es un objetivo agresivo pero alcanzable. Hablemos de los elementos clave: ¿tienes experiencia gestionando P&L? ¿Cuántas personas has liderado directamente? Para VP necesitaremos demostrar impacto en revenue y liderazgo de equipos grandes."
+
+EJEMPLO de recommended_ai_approach INCORRECTO:
+"Responder de manera colaborativa reconociendo la ambición del usuario y proponiendo un marco para discutir..."
+
+IMPORTANTE: En recommended_ai_approach, escribe EXACTAMENTE lo que el personaje AI diría, no instrucciones sobre cómo responder.
 
 {format_instructions}
 """)

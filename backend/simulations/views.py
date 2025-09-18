@@ -74,6 +74,13 @@ class SimulationViewSet(viewsets.ModelViewSet):
                     simulation.save()
                     print(f"🔧 Simulation saved successfully")
 
+                    # Generate initial AI message to start the conversation
+                    initial_message = self.generate_initial_ai_message(simulation)
+                    if initial_message:
+                        print(f"🎭 Initial AI message generated successfully")
+                    else:
+                        print(f"⚠️ Warning: Could not generate initial AI message")
+
                     # Return updated data
                     response.data = SimulationSerializer(simulation).data
                     print(f"🔧 Response data updated")
@@ -611,3 +618,149 @@ class SimulationViewSet(viewsets.ModelViewSet):
                 {'error': f'Failed to calculate deep analytics: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    def generate_initial_ai_message(self, simulation):
+        """Generate initial AI message to start the conversation with proper context"""
+        try:
+            from ai_service.structured_agent import structured_simulation_agent, SimulationState
+            from ai_service.agents import AIModelRouter
+
+            print(f"🎭 Generating initial AI message for simulation {simulation.id}")
+
+            # Get scenario context
+            if simulation.scenario:
+                scenario_context = simulation.scenario.description
+                ai_personality = {
+                    'analytical': 50,
+                    'patience': 50,
+                    'aggression': 30,
+                    'flexibility': 50
+                }
+                ai_objectives = ["Establecer contexto del escenario", "Invitar al usuario a participar"]
+                user_objectives = simulation.scenario.objectives
+                ai_role = f"Personaje principal en {simulation.scenario.category}"
+                user_role = "Participante del escenario de aprendizaje"
+                knowledge_base = None
+                scenario_title = simulation.scenario.title
+            else:
+                custom_sim = simulation.custom_simulation
+                scenario_context = custom_sim.description
+                ai_personality = custom_sim.ai_personality
+                ai_objectives = custom_sim.ai_objectives
+                user_objectives = custom_sim.user_objectives
+                ai_role = custom_sim.ai_role
+                user_role = custom_sim.user_role
+                knowledge_base = custom_sim.knowledge_base
+                scenario_title = custom_sim.title
+
+            # Create a special prompt for initial message generation
+            from ai_service.llm_analyzer import llm_analyzer
+
+            initial_prompt = f"""
+Eres el personaje AI en una simulación de liderazgo ejecutivo. Tu tarea es generar un mensaje inicial natural y profesional para dar inicio a la simulación.
+
+CONTEXTO DEL ESCENARIO:
+{scenario_context}
+
+TU ROL:
+{ai_role}
+
+ROL DEL USUARIO:
+{user_role}
+
+OBJETIVOS DE LA SIMULACIÓN:
+{', '.join(user_objectives)}
+
+INSTRUCCIONES:
+1. Escribe DIRECTAMENTE lo que tu personaje diría para iniciar la conversación
+2. Establece el contexto y la situación
+3. Mantén un tono profesional apropiado para el escenario
+4. Invita al usuario a participar de manera natural
+5. NO uses frases meta como "Bienvenido a la simulación" o "Empecemos"
+6. Habla desde tu rol específico en el escenario
+
+EJEMPLOS CORRECTOS por tipo de escenario:
+
+Para M&A: "Buenos días. Agradezco que hayan tomado el tiempo para esta reunión. Como CEO de la empresa, estoy interesado en entender mejor su propuesta de adquisición y cómo ven el futuro de nuestro equipo en esta transacción."
+
+Para Crisis: "La situación está escalando más rápido de lo que esperábamos. Los medios ya están publicando la historia y necesitamos actuar ahora. ¿Cuál es su recomendación para manejar esto?"
+
+Para Performance: "Gracias por hacer tiempo para esta evaluación. Entiendo que mi desempeño en el último trimestre no ha cumplido las expectativas y quiero discutir cómo podemos mejorar los resultados."
+
+Genera SOLO el mensaje inicial, sin explicaciones adicionales.
+"""
+
+            # Use LLM to generate the initial message
+            try:
+                analysis = llm_analyzer.analyze_message_comprehensive(
+                    user_message=initial_prompt,
+                    conversation_history=[],
+                    scenario_context=scenario_context,
+                    user_objectives=user_objectives,
+                    end_conditions=[],
+                    ai_personality=ai_personality
+                )
+
+                initial_content = analysis.recommended_ai_approach
+                emotion = analysis.emotion_analysis.primary_emotion
+
+                print(f"🎭 Generated initial content: '{initial_content[:100]}...'")
+
+            except Exception as e:
+                print(f"⚠️ LLM failed to generate initial message, using fallback: {e}")
+
+                # Fallback based on scenario type
+                scenario_type = self._detect_scenario_type(scenario_context)
+                if 'fusión' in scenario_context.lower() or 'adquisición' in scenario_context.lower():
+                    initial_content = "Buenos días. Agradezco que hayan tomado el tiempo para esta reunión. Como CEO de la empresa, estoy interesado en entender mejor su propuesta y cómo ven el futuro de nuestro equipo en esta transacción."
+                elif 'crisis' in scenario_context.lower():
+                    initial_content = "La situación está escalando más rápido de lo que esperábamos. Los medios ya están cubriendo la historia y necesitamos actuar decisivamente. ¿Cuál es su recomendación para manejar esto?"
+                elif 'desempeño' in scenario_context.lower() or 'evaluación' in scenario_context.lower():
+                    initial_content = "Gracias por hacer tiempo para esta reunión. Entiendo que mi desempeño en el último periodo no ha cumplido completamente las expectativas y quiero discutir cómo podemos mejorar los resultados."
+                elif 'pitch' in scenario_context.lower() or 'inversión' in scenario_context.lower():
+                    initial_content = "Bienvenidos. He revisado su pitch deck y hay aspectos interesantes, pero tengo algunas preguntas importantes sobre el modelo de negocio y las proyecciones financieras antes de considerar una inversión."
+                else:
+                    initial_content = f"Buenos días. Me complace iniciar esta sesión sobre {scenario_title}. Estoy listo para discutir los objetivos y desafíos que tenemos por delante."
+
+                emotion = "neutral"
+
+            # Create the initial AI message
+            ai_message = Message.objects.create(
+                simulation=simulation,
+                sender='ai',
+                content=initial_content,
+                emotion=emotion
+            )
+
+            # Generate embedding for the message
+            try:
+                model_router = AIModelRouter()
+                embedding = model_router.generate_embedding(initial_content)
+                ai_message.content_vector = embedding
+                ai_message.save()
+            except Exception as e:
+                print(f"⚠️ Could not generate embedding for initial message: {e}")
+
+            print(f"✅ Initial AI message created: ID {ai_message.id}")
+            return ai_message
+
+        except Exception as e:
+            print(f"❌ Failed to generate initial AI message: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _detect_scenario_type(self, context):
+        """Detect scenario type from context"""
+        context_lower = context.lower()
+
+        if any(word in context_lower for word in ['fusión', 'adquisición', 'merger', 'm&a', 'acquisition']):
+            return 'merger-negotiation'
+        elif any(word in context_lower for word in ['crisis', 'reputación', 'problema', 'emergency']):
+            return 'crisis-leadership'
+        elif any(word in context_lower for word in ['pitch', 'inversión', 'startup', 'financiamiento', 'funding']):
+            return 'startup-pitch'
+        elif any(word in context_lower for word in ['desempeño', 'evaluación', 'performance']):
+            return 'performance-review'
+        else:
+            return 'default'

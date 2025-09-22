@@ -95,7 +95,7 @@ DATABASES = {
         'NAME': config('DB_NAME', default='oasis'),
         'USER': config('DB_USER', default='oasis'),
         'PASSWORD': config('DB_PASSWORD', default='oasis'),
-        'HOST': config('DB_HOST', default='db'),
+        'HOST': config('DB_HOST', default='postgres'),
         'PORT': config('DB_PORT', default='5432'),
     }
 }

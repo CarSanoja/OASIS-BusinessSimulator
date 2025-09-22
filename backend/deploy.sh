@@ -43,9 +43,14 @@ fi
 
 # Check if .env file exists
 if [[ ! -f ".env.${ENVIRONMENT}" ]]; then
-    print_error ".env.${ENVIRONMENT} file not found!"
-    print_status "Please create .env.${ENVIRONMENT} from .env.${ENVIRONMENT}.example"
-    exit 1
+    if [[ -f ".env" ]]; then
+        print_warning "Using .env file as .env.${ENVIRONMENT}"
+        cp .env .env.${ENVIRONMENT}
+    else
+        print_error ".env.${ENVIRONMENT} file not found!"
+        print_status "Please copy your .env file to the server"
+        exit 1
+    fi
 fi
 
 # Check if docker and docker-compose are installed
@@ -59,10 +64,15 @@ if ! command -v docker-compose &> /dev/null; then
     exit 1
 fi
 
-print_header "Pulling latest code from repository"
-git fetch --all
-git reset --hard origin/main
-print_status "✅ Code updated successfully"
+print_header "Checking for code updates"
+if [ -d ".git" ]; then
+    print_status "Git repository found, pulling updates..."
+    git fetch --all
+    git reset --hard origin/main
+    print_status "✅ Code updated successfully"
+else
+    print_status "No git repository found, using deployed files"
+fi
 
 print_header "Backing up database (if exists)"
 if docker-compose -f $COMPOSE_FILE ps postgres | grep -q "Up"; then
@@ -125,8 +135,8 @@ docker system prune -f
 print_status "✅ Docker cleanup completed"
 
 print_header "Deployment completed successfully! 🎉"
-print_status "Application is now running at: https://api.oasis.somosquanta.com"
-print_status "Admin interface: https://api.oasis.somosquanta.com/admin/"
+print_status "Application is now running on the server"
+print_status "Configure your domain and SSL certificate for production access"
 
 # Display running containers
 print_header "Running containers"

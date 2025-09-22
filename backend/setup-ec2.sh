@@ -210,14 +210,17 @@ print_status "✅ Monitoring tools installed"
 
 print_header "Setting up Git Configuration"
 cd /opt/oasis
-print_status "Cloning OASIS repository..."
-git clone https://github.com/CarSanoja/OASIS-BusinessSimulator.git .
 
-print_status "✅ Repository cloned"
+# Configure Git with GitHub credentials if needed
+print_status "Repository will be cloned with provided credentials"
+print_warning "Note: For private repos, you'll need to provide GitHub token or deploy key"
 
-print_header "Creating Environment File"
-cp backend/.env.production.example backend/.env.production
-print_warning "⚠️  IMPORTANT: Edit /opt/oasis/backend/.env.production with your actual values!"
+# The actual clone will be done after setup with proper authentication
+print_status "✅ Directory prepared for Git deployment"
+
+print_header "Environment File Setup"
+print_warning "⚠️  IMPORTANT: The .env file will be copied from local machine after EC2 setup"
+print_status "Waiting for environment file to be deployed..."
 
 print_header "Final System Configuration"
 # Increase vm.max_map_count for Elasticsearch (if needed in future)
@@ -231,9 +234,10 @@ print_status "✅ System configuration completed"
 print_header "Setup completed successfully! 🎉"
 echo ""
 print_status "Next Steps:"
-echo "1. Edit /opt/oasis/backend/.env.production with your actual configuration"
-echo "2. Run: cd /opt/oasis/backend && ./deploy.sh"
-echo "3. Configure SSL: sudo certbot --nginx -d api.oasis.somosquanta.com"
+echo "1. Clone private repository: git clone https://github.com/[your-username]/[repo-name].git /opt/oasis"
+echo "2. Copy .env file: scp -i key.pem .env ubuntu@<EC2_IP>:/opt/oasis/backend/.env.production"
+echo "3. Run deployment: cd /opt/oasis/backend && ./deploy.sh"
+echo "4. Configure SSL: sudo certbot --nginx -d your-domain.com"
 echo ""
 print_status "Useful commands:"
 echo "  - Check Docker: docker --version && docker-compose --version"

@@ -44,7 +44,8 @@ def health_check(request):
 
     # Check Redis Connection
     try:
-        redis_client = redis.from_url(getattr(settings, 'REDIS_URL', 'redis://localhost:6379'))
+        redis_url = os.getenv('REDIS_URL') or getattr(settings, 'CELERY_BROKER_URL', 'redis://localhost:6379')
+        redis_client = redis.from_url(redis_url)
         redis_client.ping()
         health_status['services']['redis'] = {
             'status': 'healthy',
